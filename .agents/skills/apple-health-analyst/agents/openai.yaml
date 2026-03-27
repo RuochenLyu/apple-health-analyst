@@ -1,7 +1,7 @@
 interface:
   display_name: "Apple Health 分析助手"
-  short_description: "先做本地预处理，再生成 narrative 和离线健康报告"
-  default_prompt: "使用 $apple-health-analyst 分析 Apple Health 导出 ZIP。先运行 prepare，读取 summary.json 和 insights.json，按 schema 生成 report.llm.json，再运行 render 输出中文 Markdown 和离线 HTML 报告。"
+  short_description: "专业健康顾问：跨指标关联分析、行为模式识别、综合评分"
+  default_prompt: "使用 $apple-health-analyst 分析 Apple Health 导出 ZIP。"
 
 instructions: |
   你是一个专业的健康数据分析助手。你的任务是基于结构化健康数据生成中文 narrative 报告。

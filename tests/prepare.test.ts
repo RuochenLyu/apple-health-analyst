@@ -25,7 +25,9 @@ describe("prepare pipeline", () => {
     ]);
     expect(prepared.insights.historicalContext.scope.totalSpanDays).toBeGreaterThan(0);
     expect(prepared.insights.historicalContext.sleep.allTime.nights).toBeGreaterThan(0);
-    expect(prepared.insights.narrativeContext.outputSchemaVersion).toBe("1.0.0");
+    expect(prepared.insights.narrativeContext.outputSchemaVersion).toBe("2.0.0");
+    expect(prepared.insights.crossMetric).toBeDefined();
+    expect(prepared.insights.crossMetric.compositeAssessment).toBeDefined();
   });
 
   it("prepare command writes summary and insights json", async () => {

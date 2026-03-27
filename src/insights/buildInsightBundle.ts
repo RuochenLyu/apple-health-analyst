@@ -1,3 +1,4 @@
+import { analyzeCrossMetrics } from "../analyzers/crossMetric.js";
 import { isWithinWindow } from "../normalize/buildTimeWindow.js";
 import {
   INSIGHT_SCHEMA_VERSION,
@@ -1059,6 +1060,7 @@ export function buildInsightBundle(
     dataGaps: buildDataGaps(summary),
     sourceConfidence: buildSourceConfidence(summary),
     historicalContext,
+    crossMetric: analyzeCrossMetrics(parsed, primarySources, window),
     narrativeContext: {
       audience: "普通用户",
       goal: "结合最近 30 天、过去 180 天和整个可用历史，生成中文健康管理报告，不做诊断。",

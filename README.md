@@ -1,70 +1,41 @@
 # apple-health-analyst
 
-面向 Codex skill 的本地 Apple Health 分析工具。
+本地分析 Apple Health 导出数据，生成带有跨指标关联分析、行为模式识别和综合评分的中文健康报告。
 
-它的职责不是把整份 Apple Health ZIP 直接塞给模型，而是先用 Node.js 做确定性预处理：
-- 读取官方导出 ZIP，不解压到当前工作目录
-- 选择每个指标的主数据源，避免跨设备盲目混合
-- 把大体量历史压缩成适合 LLM 阅读的结构化洞察
-- 生成 `summary.json`、`insights.json`、`report.llm.json`、`report.md`、`report.html`
-- 输出可直接双击打开的单文件 HTML 报告
+不是数据仪表盘——手机就能看数据。这个工具的价值是**像健康顾问一样解读你的数据**：睡眠和恢复之间有什么关联？作息规律性如何影响 HRV？训练负荷和恢复能力是否匹配？
 
-## 设计目标
-- 普通用户可以在 Codex 中用“一句话 + ZIP 路径”调用 skill
-- Node 负责事实提取、趋势压缩、图表数据和风险信号
-- Codex / GPT-5.4 只负责基于结构化产物写中文 narrative
-- 报告提供健康管理建议，不做医学诊断
+## 特性
 
-## 隐私
-- 完全本地运行
-- 不依赖服务器
-- 不在 Node 里调用 OpenAI API
-- 除非你主动分享产物，否则不会上传健康数据
+- **跨指标关联分析** — 睡眠-HRV 联动、训练-恢复平衡、作息规律性评估
+- **行为模式识别** — 周末战士、夜猫子漂移、睡眠补偿、恢复不足
+- **综合评分** — 睡眠/恢复/活动三维度 0-100 分，算法透明可解释
+- **隐私优先** — 完全本地运行，不调用外部 API，不上传任何数据
+- **离线 HTML 报告** — 单文件，内联 CSS + SVG 图表，双击即开
 
 ## 快速开始
+
 ```bash
 npm install
 npm run build
 node dist/cli.js analyze /path/to/export.zip --out ./output
 ```
 
-开发模式：
-```bash
-npm run dev -- analyze /path/to/export.zip --out ./output
-```
+打开 `output/report.html` 查看报告。
+
+## 覆盖指标
+
+| 模块 | 指标 |
+|------|------|
+| 睡眠 | 时长、深睡/REM/核心占比、入睡/起床时间、规律性 |
+| 恢复 | 静息心率、HRV、血氧、呼吸频率、最大摄氧量 |
+| 活动 | 活动能量、锻炼分钟、站立小时、训练记录 |
+| 身体成分 | 体重、体脂率 |
 
 ## CLI
-### `prepare`
-读取 ZIP，输出稳定机器摘要与 LLM/网页专用洞察。
 
-```bash
-apple-health-analyst prepare <export.zip> \
-  --from YYYY-MM-DD \
-  --to YYYY-MM-DD \
-  --out <dir>
-```
+### `analyze`（推荐）
 
-输出：
-- `summary.json`
-- `insights.json`
-
-### `render`
-读取 `insights.json` 和符合 schema 的 `report.llm.json`，渲染最终报告。
-
-```bash
-apple-health-analyst render \
-  --insights ./output/insights.json \
-  --narrative ./output/report.llm.json \
-  --out ./output
-```
-
-输出：
-- `report.llm.json`
-- `report.md`
-- `report.html`
-
-### `analyze`
-兼容入口。它会先执行 `prepare`，再用内置 deterministic fallback narrative 生成一套可直接查看的完整报告。
+一步完成：解析 ZIP → 分析 → 生成报告。
 
 ```bash
 apple-health-analyst analyze <export.zip> \
@@ -74,77 +45,41 @@ apple-health-analyst analyze <export.zip> \
   --out <dir>
 ```
 
-`--format` 语义：
-- `json`：写出 `summary.json`、`insights.json`、`report.llm.json`
-- `markdown`：写出 `report.md`
-- `html`：写出 `report.html`
+### `prepare` + `render`（配合 LLM）
 
-## 输出文件
-- `summary.json`：稳定的机器摘要，保留基础分析结果与主数据源选择
-- `insights.json`：给 Codex 和 HTML 渲染使用的富结构洞察，包含图表序列、风险信号、数据缺口、source confidence
-- `report.llm.json`：Codex 生成的 narrative JSON，字段 schema 见 [`.agents/skills/apple-health-analyst/references/report-llm-json.md`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/references/report-llm-json.md)
-- `report.md`：中文可读报告
-- `report.html`：离线单文件网页报告，内联 CSS 与 SVG 图表
+分两步：先生成结构化数据，让 LLM 写 narrative，再渲染报告。
 
-## 历史压缩策略
-为了控制上下文和网页体量，时序数据默认按以下规则压缩：
-- 近 30 天：保留日级
-- 31-180 天：压缩为周级
-- 180 天以前：压缩为月级
+```bash
+# 1. 生成 summary.json + insights.json
+apple-health-analyst prepare <export.zip> --out ./output
 
-这只影响 `insights.json` 和图表层，不影响原始解析与主数据源判断。
+# 2. (LLM 读取 insights.json，生成 report.llm.json)
 
-## Skill 用法
-项目级 skill 已按 Codex repo 规则放到 `.agents/skills/apple-health-analyst/`：
-- [`.agents/skills/apple-health-analyst/SKILL.md`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/SKILL.md)
-- [`.agents/skills/apple-health-analyst/agents/openai.yaml`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/agents/openai.yaml)
-- [`.agents/skills/apple-health-analyst/references/report-llm-json.md`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/references/report-llm-json.md)
-- [`.agents/skills/apple-health-analyst/references/safety-boundaries.md`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/references/safety-boundaries.md)
-
-推荐按三步工作流使用：
-
-1. 运行 `prepare`
-2. 让 Codex 读取 `summary.json` 和 `insights.json`，生成符合 schema 的 `report.llm.json`
-3. 运行 `render`
-
-自然语言示例：
-
-```text
-使用 $apple-health-analyst 分析 /path/to/export.zip。
-先运行 prepare，读取 summary.json 和 insights.json，
-按照 skill 要求生成 report.llm.json，再运行 render，最后给我中文结论。
+# 3. 渲染最终报告
+apple-health-analyst render \
+  --insights ./output/insights.json \
+  --narrative ./output/report.llm.json \
+  --out ./output
 ```
 
-skill 的 narrative schema 和安全边界见：
-- [`.agents/skills/apple-health-analyst/references/report-llm-json.md`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/references/report-llm-json.md)
-- [`.agents/skills/apple-health-analyst/references/safety-boundaries.md`](/Users/ruochen/workspace/apple-health-analyst/.agents/skills/apple-health-analyst/references/safety-boundaries.md)
+## 作为 Codex Skill 使用
 
-## 当前覆盖
-- 睡眠
-- 静息心率
-- HRV
-- 血氧
-- 呼吸频率
-- 最大摄氧量
-- 体重
-- 体脂率
-- 活动摘要
-- 训练记录
+```text
+使用 $apple-health-analyst 分析 /path/to/export.zip
+```
 
-附件范围：
-- ECG CSV：计数
-- 训练路线 GPX：计数
-- 图片附件：计数
+Skill 配置在 [`.agents/skills/apple-health-analyst/`](.agents/skills/apple-health-analyst/SKILL.md)，包含健康顾问角色定义、分析框架和 narrative schema。
 
 ## 限制
-- 不会生成单一“健康评分”
-- 不会在 Node 中调用大模型
+
 - 不提供医学诊断或治疗建议
-- v1 不深入分析 ECG 波形或 GPS 路线
-- 步数和距离不会跨设备强行合并成高置信度结论
+- 不分析 ECG 波形或 GPS 路线（仅计数）
+- 步数和距离不跨设备合并
 
 ## 开发
+
 ```bash
-npm run build
-npm test
+npm run dev -- analyze /path/to/export.zip --out ./output  # 开发模式
+npm run build   # 编译
+npm test        # 测试
 ```

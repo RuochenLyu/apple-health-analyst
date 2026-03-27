@@ -64,6 +64,9 @@ export function validateNarrativeReport(
 
   return {
     schema_version: schemaVersion,
+    health_assessment: ensureString(candidate.health_assessment, "health_assessment"),
+    cross_metric_insights: ensureStringArray(candidate.cross_metric_insights, "cross_metric_insights"),
+    behavioral_patterns: ensureStringArray(candidate.behavioral_patterns, "behavioral_patterns"),
     overview: ensureString(candidate.overview, "overview"),
     key_findings: ensureStringArray(candidate.key_findings, "key_findings"),
     strengths: ensureStringArray(candidate.strengths, "strengths"),

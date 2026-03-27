@@ -10,8 +10,24 @@ function section(title: string, values: string[]): string {
 
 export function renderReportMarkdown(insights: InsightBundle, narrative: NarrativeReport): string {
   const callouts = new Map(narrative.chart_callouts.map((item) => [item.chart_id, item]));
+  const cm = insights.crossMetric;
+  const scoresParts: string[] = [];
+  if (cm.compositeAssessment.sleepScore !== null) scoresParts.push(`睡眠 ${cm.compositeAssessment.sleepScore}/100`);
+  if (cm.compositeAssessment.recoveryScore !== null) scoresParts.push(`恢复 ${cm.compositeAssessment.recoveryScore}/100`);
+  if (cm.compositeAssessment.activityScore !== null) scoresParts.push(`活动 ${cm.compositeAssessment.activityScore}/100`);
+
   const lines = [
     "# Apple Health 健康报告",
+    "",
+    "## 综合健康评估",
+    narrative.health_assessment,
+    "",
+    scoresParts.length > 0 ? `**综合评分**：${scoresParts.join(" | ")}` : "",
+    cm.compositeAssessment.overallReadiness ? `**整体状态**：${cm.compositeAssessment.overallReadiness === "good" ? "良好" : cm.compositeAssessment.overallReadiness === "moderate" ? "中等" : "偏低"}` : "",
+    "",
+    section("跨指标关联分析", narrative.cross_metric_insights),
+    "",
+    section("行为模式", narrative.behavioral_patterns),
     "",
     "## 概览",
     narrative.overview,

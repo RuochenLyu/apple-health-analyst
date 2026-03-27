@@ -263,7 +263,7 @@ export interface AnalysisSummary {
 }
 
 export const INSIGHT_SCHEMA_VERSION = "2.1.0";
-export const NARRATIVE_REPORT_SCHEMA_VERSION = "1.0.0";
+export const NARRATIVE_REPORT_SCHEMA_VERSION = "2.0.0";
 
 export type ChartGranularity = "day" | "week" | "month";
 export type ChartVisual = "line" | "bar";
@@ -428,6 +428,7 @@ export interface InsightBundle {
   dataGaps: DataGap[];
   sourceConfidence: SourceConfidence[];
   historicalContext: InsightHistoricalContext;
+  crossMetric: import("./analyzers/crossMetric.js").CrossMetricAnalysis;
   narrativeContext: InsightNarrativeContext;
 }
 
@@ -439,6 +440,9 @@ export interface NarrativeChartCallout {
 
 export interface NarrativeReport {
   schema_version: string;
+  health_assessment: string;
+  cross_metric_insights: string[];
+  behavioral_patterns: string[];
   overview: string;
   key_findings: string[];
   strengths: string[];

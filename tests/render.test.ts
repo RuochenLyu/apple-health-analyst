@@ -43,8 +43,11 @@ describe("render pipeline", () => {
     expect(html).toContain('id="sleep"');
     expect(html).toContain('id="recovery"');
     expect(html).toContain("关键发现");
+    expect(markdown).toContain("## 综合健康评估");
     expect(markdown).toContain("## 关键发现");
     expect(markdown).toContain("## 长期历史参照");
-    expect(narrativeJson.schema_version).toBe("1.0.0");
+    expect(narrativeJson.schema_version).toBe("2.0.0");
+    expect(narrativeJson.health_assessment).toBeDefined();
+    expect(narrativeJson.cross_metric_insights).toBeDefined();
   });
 });

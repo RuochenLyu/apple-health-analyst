@@ -220,7 +220,8 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
     bodyChart?.subtitle ?? "身体成分更适合看月度方向。",
   );
 
-  // Summary card values
+  // Cross-metric data
+  const cm = insights.crossMetric;
   const sleepVal = fmt(insights.analysis.sleep.recent30d.avgSleepHours, "h");
   const hrVal = fmt(
     insights.analysis.recovery.metrics.restingHeartRate?.recent30d.average ?? null,
@@ -333,15 +334,16 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
 
       /* ─── Summary Cards ─── */
       .summary-cards {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        display: flex;
         gap: 16px;
         margin-bottom: 28px;
       }
       .metric-card {
+        flex: 1 1 0;
+        min-width: 0;
         background: var(--surface);
         border-radius: var(--radius);
-        padding: 16px 18px;
+        padding: 20px 22px;
         box-shadow: var(--shadow);
       }
       .metric-card__label {
@@ -762,8 +764,6 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
 
       .disclaimer {
         margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border);
         font-size: 13px;
         line-height: 1.65;
         color: var(--faint);
@@ -772,7 +772,10 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       /* ─── Responsive ─── */
       @media (max-width: 900px) {
         .summary-cards {
-          grid-template-columns: repeat(2, 1fr);
+          flex-wrap: wrap;
+        }
+        .summary-cards .metric-card {
+          flex: 1 1 calc(50% - 16px);
         }
         .module__body {
           grid-template-columns: 1fr;
@@ -793,10 +796,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         .topbar__nav {
           display: none;
         }
+        .insight-grid {
+          grid-template-columns: 1fr;
+        }
       }
       @media (max-width: 600px) {
-        .summary-cards {
-          grid-template-columns: 1fr;
+        .summary-cards .metric-card {
+          flex: 1 1 100%;
         }
         main {
           padding: 16px 12px 48px;
@@ -811,6 +817,101 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         .activity-stats {
           grid-template-columns: 1fr;
         }
+      }
+
+      /* ─── Assessment ─── */
+      .assessment {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 32px;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 24px;
+      }
+      .assessment h1 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .assessment__text {
+        font-size: 15px;
+        line-height: 1.8;
+        color: var(--ink-secondary);
+        max-width: 72ch;
+        margin-bottom: 24px;
+      }
+      .scores {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .score-ring {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-width: 90px;
+      }
+      .score-ring__value {
+        font-size: 32px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .score-ring__label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      .readiness-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 16px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .readiness--good { background: var(--positive-bg); color: var(--positive); }
+      .readiness--moderate { background: #FFF7ED; color: #D97706; }
+      .readiness--low { background: var(--risk-bg); color: var(--risk); }
+
+      /* ─── Insights Section ─── */
+      .insights-section {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 28px;
+        box-shadow: var(--shadow);
+        margin-bottom: 24px;
+      }
+      .insights-section h2 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .insight-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .insight-card {
+        border-left: 3px solid var(--sleep);
+        padding: 14px 18px;
+        background: var(--border-light);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      }
+      .insight-card--pattern {
+        border-left-color: var(--activity);
+      }
+      .insight-card p {
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--ink-secondary);
+      }
+      .insight-card h4 {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--ink);
       }
 
       /* ─── Print ─── */
@@ -831,6 +932,8 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       <span class="topbar__title">Apple Health 健康报告</span>
       <span class="topbar__date">${escapeHtml(insights.coverage.windowStart ?? "起始")} ~ ${escapeHtml(insights.coverage.windowEnd.slice(0, 10))}</span>
       <div class="topbar__nav">
+        <a href="#assessment">评估</a>
+        <a href="#insights">分析</a>
         <a href="#sleep">睡眠</a>
         <a href="#recovery">恢复</a>
         <a href="#activity">活动</a>
@@ -858,7 +961,44 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         )}
       </section>
 
-      <!-- Overview -->
+      <!-- Assessment -->
+      <section id="assessment" class="assessment">
+        <h1>综合健康评估</h1>
+        <p class="assessment__text">${escapeHtml(narrative.health_assessment)}</p>
+        <div class="scores">
+          ${cm.compositeAssessment.sleepScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--sleep)">${cm.compositeAssessment.sleepScore}</span><span class="score-ring__label">睡眠</span></div>` : ""}
+          ${cm.compositeAssessment.recoveryScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--recovery)">${cm.compositeAssessment.recoveryScore}</span><span class="score-ring__label">恢复</span></div>` : ""}
+          ${cm.compositeAssessment.activityScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--activity)">${cm.compositeAssessment.activityScore}</span><span class="score-ring__label">活动</span></div>` : ""}
+        </div>
+        ${cm.compositeAssessment.overallReadiness ? `<span class="readiness-badge readiness--${cm.compositeAssessment.overallReadiness}">整体状态：${cm.compositeAssessment.overallReadiness === "good" ? "良好" : cm.compositeAssessment.overallReadiness === "moderate" ? "中等" : "偏低"}</span>` : ""}
+        ${
+          insights.riskFlags.length > 0
+            ? `<div class="pills" style="margin-top:16px">${insights.riskFlags
+                .map(
+                  (flag) =>
+                    `<span class="pill pill--risk">${escapeHtml(flag.title)}</span>`,
+                )
+                .join("")}</div>`
+            : ""
+        }
+      </section>
+
+      <!-- Cross-Metric Insights -->
+      <section id="insights" class="insights-section">
+        <h2>关联分析</h2>
+        <div class="insight-grid">
+          <div>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">跨指标发现</h3>
+            ${narrative.cross_metric_insights.map((item) => `<div class="insight-card"><p>${escapeHtml(item)}</p></div>`).join("")}
+          </div>
+          <div>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">行为模式</h3>
+            ${narrative.behavioral_patterns.map((item) => `<div class="insight-card insight-card--pattern"><p>${escapeHtml(item)}</p></div>`).join("")}
+          </div>
+        </div>
+      </section>
+
+      <!-- Findings & Actions -->
       <section class="overview">
         <p class="overview__text">${escapeHtml(narrative.overview)}</p>
         <div class="overview__findings">
@@ -867,16 +1007,6 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             ${narrative.key_findings.slice(0, 5).map((f) => `<li>${escapeHtml(f)}</li>`).join("")}
           </ol>
         </div>
-        ${
-          insights.riskFlags.length > 0
-            ? `<div class="pills">${insights.riskFlags
-                .map(
-                  (flag) =>
-                    `<span class="pill pill--risk">${escapeHtml(flag.title)}</span>`,
-                )
-                .join("")}</div>`
-            : ""
-        }
         ${
           insights.dataGaps.length > 0
             ? `<div class="pills">${insights.dataGaps
@@ -1081,6 +1211,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
           </div>
         </div>
         <div class="disclaimer">${escapeHtml(narrative.disclaimer)}</div>
+        <div class="disclaimer" style="margin-top:12px;font-size:12px">Generated by <a href="https://github.com/RuochenLyu/apple-health-analyst" style="color:var(--muted)">apple-health-analyst</a></div>
       </section>
     </main>
   </body>
