@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { analyzeActivity } from "../analyzers/activity.js";
 import { analyzeBodyComposition } from "../analyzers/bodyComposition.js";
+import { analyzeMenstrualCycle } from "../analyzers/menstrualCycle.js";
 import { analyzeOverview } from "../analyzers/overview.js";
 import { analyzeRecovery } from "../analyzers/recovery.js";
 import { analyzeSleep } from "../analyzers/sleep.js";
@@ -118,6 +119,13 @@ export async function prepareAnalysis(
     timeWindow,
   );
 
+  const menstrual = analyzeMenstrualCycle(
+    parsed.menstrualFlow,
+    parsed.intermenstrualBleeding,
+    parsed.contraceptive,
+    timeWindow,
+  );
+
   const overview = analyzeOverview(parsed, primarySources, timeWindow);
   const summary: AnalysisSummary = {
     metadata: {
@@ -140,11 +148,13 @@ export async function prepareAnalysis(
       ...recovery.notes.map((msg) => ({ code: "recovery_note", module: "recovery" as const, message: msg })),
       ...activity.notes.map((msg) => ({ code: "activity_note", module: "activity" as const, message: msg })),
       ...bodyComposition.notes.map((msg) => ({ code: "body_note", module: "bodyComposition" as const, message: msg })),
+      ...menstrual.warnings,
     ],
     sleep: sleep.result,
     recovery,
     activity,
     bodyComposition,
+    ...(menstrual.result.status !== "insufficient_data" ? { menstrualCycle: menstrual.result } : {}),
     attachments: overview.attachments,
   };
 

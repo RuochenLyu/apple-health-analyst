@@ -4,6 +4,9 @@ import { SaxesParser } from "saxes";
 import type {
   ActivitySummarySample,
   AttachmentSummary,
+  ContraceptiveSample,
+  IntermenstrualBleedingSample,
+  MenstrualFlowSample,
   MetricKey,
   ParsedHealthExport,
   QuantitySample,
@@ -21,6 +24,14 @@ interface ZipEntryLike {
 }
 
 type HandlerName = "HealthData" | "ExportDate" | "Record" | "Workout" | "ActivitySummary";
+
+type CategoryMetric = "menstrualFlow" | "intermenstrualBleeding" | "contraceptive";
+
+const CATEGORY_RECORD_MAP: Record<string, CategoryMetric | undefined> = {
+  HKCategoryTypeIdentifierMenstrualFlow: "menstrualFlow",
+  HKCategoryTypeIdentifierIntermenstrualBleeding: "intermenstrualBleeding",
+  HKCategoryTypeIdentifierContraceptive: "contraceptive",
+};
 
 const RECORD_TYPE_MAP: Record<string, Exclude<MetricKey, "sleep"> | "sleep" | undefined> = {
   HKCategoryTypeIdentifierSleepAnalysis: "sleep",
@@ -141,6 +152,9 @@ export async function parseHealthExport(
     },
     workouts: [],
     activitySummaries: [],
+    menstrualFlow: [],
+    intermenstrualBleeding: [],
+    contraceptive: [],
     attachments: summarizeAttachments(entries, mainXmlEntry.path),
   };
 
@@ -201,6 +215,21 @@ export async function parseHealthExport(
 
       if (sourceName) {
         registerSource(sourceName, "record", metric);
+      }
+
+      const categoryMetric = recordType ? CATEGORY_RECORD_MAP[recordType] : undefined;
+      if (categoryMetric && sourceName && startDate && endDate) {
+        const canonicalSource = canonicalizeSourceName(sourceName);
+        const sample = {
+          metric: categoryMetric,
+          sourceName,
+          canonicalSource,
+          startDate,
+          endDate,
+          value: attributes.value ?? "",
+        } as MenstrualFlowSample | IntermenstrualBleedingSample | ContraceptiveSample;
+        parsed[categoryMetric].push(sample as never);
+        return;
       }
 
       if (!metric || !sourceName || !startDate || !endDate) {

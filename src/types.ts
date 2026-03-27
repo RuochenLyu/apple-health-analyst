@@ -38,6 +38,21 @@ export interface SleepSample extends BaseSample {
   value: string;
 }
 
+export interface MenstrualFlowSample extends BaseSample {
+  metric: "menstrualFlow";
+  value: string;
+}
+
+export interface IntermenstrualBleedingSample extends BaseSample {
+  metric: "intermenstrualBleeding";
+  value: string;
+}
+
+export interface ContraceptiveSample extends BaseSample {
+  metric: "contraceptive";
+  value: string;
+}
+
 export interface QuantitySample extends BaseSample {
   metric: Exclude<MetricKey, "sleep">;
   value: number;
@@ -100,6 +115,9 @@ export interface ParsedHealthExport {
   };
   workouts: WorkoutSample[];
   activitySummaries: ActivitySummarySample[];
+  menstrualFlow: MenstrualFlowSample[];
+  intermenstrualBleeding: IntermenstrualBleedingSample[];
+  contraceptive: ContraceptiveSample[];
   attachments: AttachmentSummary;
 }
 
@@ -129,7 +147,7 @@ export interface PrimarySources {
 
 export interface WarningMessage {
   code: string;
-  module: "sleep" | "recovery" | "activity" | "bodyComposition" | "overview";
+  module: "sleep" | "recovery" | "activity" | "bodyComposition" | "menstrualCycle" | "overview";
   message: string;
 }
 
@@ -222,6 +240,56 @@ export interface BodyCompositionAnalysis {
   notes: string[];
 }
 
+export type MenstrualRegularity = "regular" | "somewhat_irregular" | "irregular";
+
+export interface DetectedPeriod {
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  flowIntensity: {
+    light: number;
+    medium: number;
+    heavy: number;
+    unspecified: number;
+    none: number;
+  };
+}
+
+export interface MenstrualCycleAnalysis {
+  status: ModuleStatus;
+  source: string | null;
+  totalPeriods: number;
+  coverageDays: number;
+  avgCycleLengthDays: number | null;
+  cycleLengthStdDays: number | null;
+  avgPeriodDurationDays: number | null;
+  regularity: MenstrualRegularity | null;
+  recentCycles: Array<{
+    periodStart: string;
+    cycleLengthDays: number | null;
+    periodDurationDays: number;
+  }>;
+  flowDistribution: {
+    light: number;
+    medium: number;
+    heavy: number;
+    unspecified: number;
+  };
+  intermenstrualBleedingCount: number;
+  intermenstrualBleedingFrequencyPerCycle: number | null;
+  contraceptiveUse: string | null;
+  recent90d: {
+    periods: number;
+    avgCycleLengthDays: number | null;
+    intermenstrualBleedingDays: number;
+  };
+  historical: {
+    periods: number;
+    avgCycleLengthDays: number | null;
+  };
+  notes: string[];
+}
+
 export interface AnalysisSummary {
   metadata: {
     tool: string;
@@ -259,6 +327,7 @@ export interface AnalysisSummary {
   recovery: RecoveryAnalysis;
   activity: ActivityAnalysis;
   bodyComposition: BodyCompositionAnalysis;
+  menstrualCycle?: MenstrualCycleAnalysis;
   attachments: AttachmentSummary;
 }
 
@@ -289,7 +358,7 @@ export interface ChartSeries {
 }
 
 export interface ChartGroup {
-  id: "sleep" | "recovery" | "activity" | "bodyComposition";
+  id: "sleep" | "recovery" | "activity" | "bodyComposition" | "menstrualCycle";
   title: string;
   subtitle: string;
   series: ChartSeries[];
@@ -420,7 +489,7 @@ export interface InsightBundle {
   primarySources: AnalysisSummary["sources"]["primary"];
   analysis: Pick<
     AnalysisSummary,
-    "warnings" | "sleep" | "recovery" | "activity" | "bodyComposition" | "attachments"
+    "warnings" | "sleep" | "recovery" | "activity" | "bodyComposition" | "menstrualCycle" | "attachments"
   >;
   charts: ChartGroup[];
   riskFlags: RiskFlag[];

@@ -1,4 +1,5 @@
 import { analyzeCrossMetrics } from "../analyzers/crossMetric.js";
+import { detectPeriods, calculateCycleLengths } from "../analyzers/menstrualCycle.js";
 import { isWithinWindow } from "../normalize/buildTimeWindow.js";
 import {
   INSIGHT_SCHEMA_VERSION,
@@ -410,6 +411,15 @@ function buildInterpretationHints(
     hints.push("历史跨度已经足够长，但最近部分模块记录偏稀疏，近期判断应优先依赖记录更连续的模块。");
   }
 
+  if (summary.menstrualCycle && summary.menstrualCycle.totalPeriods >= 3) {
+    const mc = summary.menstrualCycle;
+    if (mc.regularity === "regular") {
+      hints.push(`月经周期规律（平均 ${mc.avgCycleLengthDays} 天，标准差 ${mc.cycleLengthStdDays} 天），这对整体激素平衡是积极信号。`);
+    } else if (mc.regularity === "irregular") {
+      hints.push(`月经周期不规律（标准差 ${mc.cycleLengthStdDays} 天），建议结合睡眠和压力数据综合判断，必要时咨询妇科医生。`);
+    }
+  }
+
   return unique(hints);
 }
 
@@ -635,6 +645,68 @@ function buildBodyCharts(
   };
 }
 
+function buildMenstrualCycleCharts(
+  parsed: ParsedHealthExport,
+  window: TimeWindow,
+): ChartGroup | null {
+  if (parsed.menstrualFlow.length === 0) return null;
+
+  const periods = detectPeriods(parsed.menstrualFlow);
+  if (periods.length < 2) return null;
+
+  const cycleLengths = calculateCycleLengths(periods);
+
+  // Cycle length line series: one point per cycle
+  const cycleLengthPoints = periods.slice(1).map((period, idx) => {
+    const prevStart = new Date(periods[idx].startDate);
+    const currStart = new Date(period.startDate);
+    const days = Math.round(Math.abs(currStart.getTime() - prevStart.getTime()) / (24 * 60 * 60 * 1000));
+    return {
+      start: period.startDate,
+      end: period.startDate,
+      granularity: "day" as const,
+      label: period.startDate.slice(5),
+      value: days >= 15 && days <= 90 ? days : null,
+      sampleCount: 1,
+    };
+  });
+
+  // Period duration bar series: one bar per period
+  const periodDurationPoints = periods.map((period) => ({
+    start: period.startDate,
+    end: period.endDate,
+    granularity: "day" as const,
+    label: period.startDate.slice(5),
+    value: period.durationDays,
+    sampleCount: 1,
+  }));
+
+  return {
+    id: "menstrualCycle",
+    title: "月经周期趋势",
+    subtitle:
+      cycleLengths.length > 0
+        ? `共追踪 ${periods.length} 个周期，平均周期 ${roundNumber(cycleLengths.reduce((s, v) => s + v, 0) / cycleLengths.length)} 天。`
+        : `共追踪 ${periods.length} 个经期。`,
+    series: [
+      {
+        id: "cycle_length",
+        label: "周期长度",
+        unit: "天",
+        visual: "line",
+        points: cycleLengthPoints,
+      },
+      {
+        id: "period_duration",
+        label: "经期天数",
+        unit: "天",
+        visual: "bar",
+        points: periodDurationPoints,
+      },
+    ],
+  };
+}
+
 export function buildSourceConfidence(summary: AnalysisSummary): SourceConfidence[] {
   const recoveryMetrics = Object.values(summary.recovery.metrics).filter(
     (metric): metric is NonNullable<(typeof summary.recovery.metrics)[RecoveryMetricKey]> => Boolean(metric),
@@ -702,6 +774,19 @@ export function buildSourceConfidence(summary: AnalysisSummary): SourceConfidenc
           ? `身体成分来自 ${bodySources.join(" / ") || "已选主数据源"}。`
           : "身体成分样本不足，体重和体脂建议只看方向，不看细小波动。",
     },
+    ...(summary.menstrualCycle
+      ? [
+          {
+            module: "menstrualCycle" as const,
+            level: (summary.menstrualCycle.totalPeriods >= 6
+              ? "high"
+              : summary.menstrualCycle.totalPeriods >= 3
+                ? "medium"
+                : "low") as SourceConfidence["level"],
+            summary: `月经周期数据覆盖 ${summary.menstrualCycle.totalPeriods} 个周期，${summary.menstrualCycle.coverageDays} 天记录。`,
+          },
+        ]
+      : []),
   ];
 }
 
@@ -756,6 +841,15 @@ export function buildDataGaps(summary: AnalysisSummary): DataGap[] {
         summary: `${BODY_META[metric].label} 缺少足够近期样本。`,
       });
     }
+  }
+
+  if (summary.menstrualCycle && summary.menstrualCycle.totalPeriods < 3) {
+    dataGaps.push({
+      id: "menstrual_sparse",
+      module: "menstrualCycle",
+      severity: "warning",
+      summary: "月经周期记录较少，周期规律性评估可信度有限。",
+    });
   }
 
   return dataGaps;
@@ -880,6 +974,46 @@ export function buildRiskFlags(summary: AnalysisSummary): RiskFlag[] {
     });
   }
 
+  if (summary.menstrualCycle) {
+    const mc = summary.menstrualCycle;
+    if (mc.regularity === "irregular" && mc.cycleLengthStdDays !== null) {
+      flags.push({
+        id: "menstrual_irregular",
+        module: "menstrualCycle",
+        severity: "medium",
+        title: "月经周期不规律",
+        summary: "近期月经周期波动较大，建议关注生活节奏、压力和营养状况。",
+        evidence: [`周期标准差 ${mc.cycleLengthStdDays} 天`, `平均周期 ${mc.avgCycleLengthDays} 天`],
+        recommendationFocus: "保持规律作息和均衡饮食，如持续不规律建议妇科检查。",
+        seekCare: mc.cycleLengthStdDays > 10,
+      });
+    }
+    if (mc.avgCycleLengthDays !== null && (mc.avgCycleLengthDays < 21 || mc.avgCycleLengthDays > 38)) {
+      flags.push({
+        id: "menstrual_cycle_length_abnormal",
+        module: "menstrualCycle",
+        severity: "medium",
+        title: "月经周期偏离正常范围",
+        summary: `平均周期 ${mc.avgCycleLengthDays} 天，正常范围为 21-38 天。`,
+        evidence: [`平均周期 ${mc.avgCycleLengthDays} 天`],
+        recommendationFocus: "建议咨询妇科医生，排查激素水平或其他潜在原因。",
+        seekCare: true,
+      });
+    }
+    if (mc.intermenstrualBleedingFrequencyPerCycle !== null && mc.intermenstrualBleedingFrequencyPerCycle > 0.3) {
+      flags.push({
+        id: "menstrual_intermenstrual_bleeding",
+        module: "menstrualCycle",
+        severity: "low",
+        title: "经间期出血较频繁",
+        summary: "检测到较频繁的经间期出血记录，建议留意是否伴随其他症状。",
+        evidence: [`经间期出血 ${mc.intermenstrualBleedingCount} 次`, `平均每周期 ${mc.intermenstrualBleedingFrequencyPerCycle} 次`],
+        recommendationFocus: "如果经间期出血持续或量增多，建议妇科检查。",
+        seekCare: false,
+      });
+    }
+  }
+
   return flags;
 }
 
@@ -969,6 +1103,40 @@ export function buildNotableChanges(summary: AnalysisSummary, charts: ChartGroup
     });
   }
 
+  if (summary.menstrualCycle) {
+    const mc = summary.menstrualCycle;
+    if (mc.regularity === "regular" && mc.totalPeriods >= 3) {
+      changes.push({
+        id: "menstrual_regular",
+        module: "menstrualCycle",
+        direction: "stable",
+        title: "月经周期规律",
+        summary: `平均周期 ${mc.avgCycleLengthDays} 天，标准差 ${mc.cycleLengthStdDays} 天，周期稳定。`,
+        evidence: [`共 ${mc.totalPeriods} 个周期`, `标准差 ${mc.cycleLengthStdDays} 天`],
+      });
+    }
+    if (
+      mc.recent90d.avgCycleLengthDays !== null &&
+      mc.historical.avgCycleLengthDays !== null &&
+      mc.historical.periods >= 3
+    ) {
+      const delta = mc.recent90d.avgCycleLengthDays - mc.historical.avgCycleLengthDays;
+      if (Math.abs(delta) >= 3) {
+        changes.push({
+          id: "menstrual_cycle_shift",
+          module: "menstrualCycle",
+          direction: "mixed",
+          title: "月经周期长度变化",
+          summary: `近 90 天平均周期 ${mc.recent90d.avgCycleLengthDays} 天，历史平均 ${mc.historical.avgCycleLengthDays} 天，变化 ${delta > 0 ? "+" : ""}${roundNumber(delta)} 天。`,
+          evidence: [
+            `近 90 天均值 ${mc.recent90d.avgCycleLengthDays} 天`,
+            `历史均值 ${mc.historical.avgCycleLengthDays} 天`,
+          ],
+        });
+      }
+    }
+  }
+
   return changes;
 }
 
@@ -978,11 +1146,13 @@ export function buildInsightBundle(
   window: TimeWindow,
   summary: AnalysisSummary,
 ): InsightBundle {
+  const menstrualChart = buildMenstrualCycleCharts(parsed, window);
   const charts = [
     buildSleepCharts(parsed, primarySources, window),
     buildRecoveryCharts(parsed, primarySources, window),
     buildActivityCharts(parsed.activitySummaries, parsed.workouts, window),
     buildBodyCharts(parsed, primarySources, window),
+    ...(menstrualChart ? [menstrualChart] : []),
   ];
   const historicalContext: InsightHistoricalContext = {
     scope: {
@@ -1052,6 +1222,7 @@ export function buildInsightBundle(
       recovery: summary.recovery,
       activity: summary.activity,
       bodyComposition: summary.bodyComposition,
+      menstrualCycle: summary.menstrualCycle,
       attachments: summary.attachments,
     },
     charts,

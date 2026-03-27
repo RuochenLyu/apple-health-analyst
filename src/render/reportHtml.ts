@@ -166,11 +166,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
   const recoveryChart = insights.charts.find((chart) => chart.id === "recovery");
   const activityChart = insights.charts.find((chart) => chart.id === "activity");
   const bodyChart = insights.charts.find((chart) => chart.id === "bodyComposition");
+  const menstrualChart = insights.charts.find((chart) => chart.id === "menstrualCycle");
 
   const sleepConf = moduleConfidence(insights, "sleep");
   const recoveryConf = moduleConfidence(insights, "recovery");
   const activityConf = moduleConfidence(insights, "activity");
   const bodyConf = moduleConfidence(insights, "bodyComposition");
+  const menstrualConf = menstrualChart ? moduleConfidence(insights, "menstrualCycle") : undefined;
 
   // Charts
   const sleepSvg = sleepChart
@@ -219,6 +221,18 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
     "bodyComposition",
     bodyChart?.subtitle ?? "身体成分更适合看月度方向。",
   );
+  const menstrualCallout = menstrualChart
+    ? sectionCallout(narrative, "menstrualCycle", menstrualChart.subtitle)
+    : "";
+
+  const menstrualCycleLengthSeries = menstrualChart?.series.find((s) => s.id === "cycle_length");
+  const menstrualPeriodDurationSeries = menstrualChart?.series.find((s) => s.id === "period_duration");
+  const menstrualCycleSvg = menstrualCycleLengthSeries
+    ? renderMultiSeriesLineChart([menstrualCycleLengthSeries], ["#EC4899"], { width: 700, height: 180 })
+    : "";
+  const menstrualPeriodBars = menstrualPeriodDurationSeries
+    ? renderBarChart(menstrualPeriodDurationSeries, "#F472B6", { width: 700, height: 120 })
+    : "";
 
   // Cross-metric data
   const cm = insights.crossMetric;
@@ -254,6 +268,8 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         --activity-bg: #FFF7ED;
         --body: #6B7280;
         --body-bg: #F3F4F6;
+        --menstrual: #EC4899;
+        --menstrual-bg: #FDF2F8;
         --risk: #EF4444;
         --risk-bg: #FEF2F2;
         --positive: #22C55E;
@@ -491,6 +507,8 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       .module--activity .module__index { color: var(--activity); }
       .module--body { border-left: 4px solid var(--body); }
       .module--body .module__index { color: var(--body); }
+      .module--menstrual { border-left: 4px solid var(--menstrual); }
+      .module--menstrual .module__index { color: var(--menstrual); }
 
       .chart-wrap {
         padding: 8px 0 4px;
@@ -975,6 +993,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         <a href="#recovery">恢复</a>
         <a href="#activity">活动</a>
         <a href="#body">身体</a>
+        ${menstrualChart ? '<a href="#menstrual">月经</a>' : ""}
         <a href="#appendix">附录</a>
       </div>
     </nav>
@@ -1203,6 +1222,64 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             .join("") ?? "<p style='color:var(--faint);font-size:13px'>身体成分数据不足。</p>"}
         </div>
       </section>
+
+      ${menstrualChart && insights.analysis.menstrualCycle ? `
+      <!-- 05 Menstrual Cycle -->
+      <section id="menstrual" class="module module--menstrual">
+        <div class="module__header">
+          <span class="module__index">05</span>
+          <h2 class="module__title">${escapeHtml(menstrualChart.title)}</h2>
+          ${menstrualConf ? `<span class="badge ${confidenceClass(menstrualConf.level)}">数据${confidenceLabel(menstrualConf.level)}</span>` : ""}
+        </div>
+        <div class="module__body">
+          <div class="module__chart">
+            <p class="section-intro">${escapeHtml(menstrualCallout)}</p>
+            <div class="chart-wrap">
+              ${menstrualCycleSvg}
+              ${renderLegend([{ label: "周期长度", color: "#EC4899" }])}
+            </div>
+            ${menstrualPeriodBars ? `<div class="chart-wrap" style="margin-top:14px">
+              ${menstrualPeriodBars}
+              ${renderLegend([{ label: "经期天数", color: "#F472B6" }])}
+            </div>` : ""}
+          </div>
+          <aside class="module__aside">
+            <div class="metric-rail">
+              <div class="metric-rail__item">
+                <div class="metric-rail__label">平均周期</div>
+                <div class="metric-rail__value">${escapeHtml(fmt(insights.analysis.menstrualCycle.avgCycleLengthDays, " 天"))}</div>
+                <div class="metric-rail__note">${insights.analysis.menstrualCycle.totalPeriods} 个周期</div>
+              </div>
+              <div class="metric-rail__item">
+                <div class="metric-rail__label">平均经期</div>
+                <div class="metric-rail__value">${escapeHtml(fmt(insights.analysis.menstrualCycle.avgPeriodDurationDays, " 天"))}</div>
+                <div class="metric-rail__note">均值</div>
+              </div>
+              <div class="metric-rail__item">
+                <div class="metric-rail__label">规律性</div>
+                <div class="metric-rail__value">${escapeHtml(
+                  insights.analysis.menstrualCycle.regularity === "regular" ? "规律"
+                    : insights.analysis.menstrualCycle.regularity === "somewhat_irregular" ? "较规律"
+                    : insights.analysis.menstrualCycle.regularity === "irregular" ? "不规律"
+                    : "数据不足"
+                )}</div>
+                <div class="metric-rail__note">标准差 ${escapeHtml(fmt(insights.analysis.menstrualCycle.cycleLengthStdDays, " 天"))}</div>
+              </div>
+            </div>
+            ${insights.analysis.menstrualCycle.intermenstrualBleedingCount > 0 ? `
+            <div class="note-block">
+              <h4>经间期出血</h4>
+              <p>共 ${insights.analysis.menstrualCycle.intermenstrualBleedingCount} 次记录</p>
+            </div>` : ""}
+            ${menstrualConf ? `<div class="note-block"><h4>来源与覆盖</h4><p>${escapeHtml(menstrualConf.summary)}</p></div>` : ""}
+            ${insights.analysis.menstrualCycle.notes.length > 0 ? `
+            <div class="note-block">
+              <h4>备注</h4>
+              <ul>${insights.analysis.menstrualCycle.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+            </div>` : ""}
+          </aside>
+        </div>
+      </section>` : ""}
 
       <!-- Actions -->
       <div class="actions">
