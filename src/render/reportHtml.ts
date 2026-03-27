@@ -274,6 +274,12 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         --risk-bg: #FEF2F2;
         --positive: #22C55E;
         --positive-bg: #F0FDF4;
+        --fs-xs: 11px;
+        --fs-sm: 13px;
+        --fs-base: 15px;
+        --fs-lg: 18px;
+        --fs-xl: 22px;
+        --fs-2xl: 28px;
         --radius: 10px;
         --radius-sm: 6px;
         --shadow: none;
@@ -287,7 +293,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       body {
         color: var(--ink);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        font-size: 15px;
+        font-size: var(--fs-base);
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
@@ -309,12 +315,12 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       }
       .topbar__title {
         font-weight: 600;
-        font-size: 15px;
+        font-size: var(--fs-base);
         white-space: nowrap;
       }
       .topbar__date {
         color: var(--muted);
-        font-size: 13px;
+        font-size: var(--fs-sm);
         white-space: nowrap;
       }
       .topbar__nav {
@@ -327,7 +333,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         align-items: center;
         padding: 6px 14px;
         border-radius: 999px;
-        font-size: 13px;
+        font-size: var(--fs-sm);
         font-weight: 500;
         color: var(--muted);
         text-decoration: none;
@@ -363,7 +369,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         box-shadow: var(--shadow);
       }
       .metric-card__label {
-        font-size: 12px;
+        font-size: var(--fs-sm);
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -371,13 +377,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         margin-bottom: 6px;
       }
       .metric-card__value {
-        font-size: 28px;
+        font-size: var(--fs-2xl);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         line-height: 1.1;
       }
       .metric-card__sub {
-        font-size: 12px;
+        font-size: var(--fs-sm);
         color: var(--faint);
         margin-top: 4px;
       }
@@ -389,8 +395,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         padding: 28px;
         margin-bottom: 28px;
       }
+      .overview__title {
+        font-size: var(--fs-lg);
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
       .overview__text {
-        font-size: 15px;
+        font-size: var(--fs-base);
         line-height: 1.75;
         color: var(--ink-secondary);
         max-width: 72ch;
@@ -401,7 +412,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         border-top: 1px solid var(--border);
       }
       .overview__findings h3 {
-        font-size: 14px;
+        font-size: var(--fs-base);
         font-weight: 600;
         margin-bottom: 12px;
         color: var(--ink);
@@ -412,7 +423,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         gap: 8px;
       }
       .overview__findings li {
-        font-size: 14px;
+        font-size: var(--fs-base);
         line-height: 1.65;
         color: var(--ink-secondary);
       }
@@ -427,7 +438,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         align-items: center;
         padding: 5px 12px;
         border-radius: 999px;
-        font-size: 12px;
+        font-size: var(--fs-sm);
         font-weight: 500;
       }
       .pill--risk {
@@ -455,18 +466,18 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         border-bottom: 1px solid var(--border);
       }
       .module__index {
-        font-size: 13px;
+        font-size: var(--fs-sm);
         font-weight: 700;
         color: var(--faint);
         min-width: 28px;
       }
       .module__title {
-        font-size: 18px;
+        font-size: var(--fs-lg);
         font-weight: 700;
       }
       .module__callout {
         margin-left: auto;
-        font-size: 13px;
+        font-size: var(--fs-sm);
         color: var(--muted);
         max-width: 40ch;
         text-align: right;
@@ -476,7 +487,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         align-items: center;
         padding: 3px 10px;
         border-radius: 999px;
-        font-size: 11px;
+        font-size: var(--fs-xs);
         font-weight: 600;
         letter-spacing: 0.03em;
       }
@@ -529,7 +540,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        font-size: 12px;
+        font-size: var(--fs-sm);
         color: var(--muted);
       }
       .legend-item i {
@@ -549,20 +560,24 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         border-top: 1px solid var(--border);
       }
       .metric-rail__label {
-        font-size: 12px;
+        font-size: var(--fs-sm);
         color: var(--muted);
         margin-bottom: 4px;
       }
       .metric-rail__value {
-        font-size: 22px;
+        font-size: var(--fs-xl);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         line-height: 1.1;
       }
       .metric-rail__note {
-        font-size: 11px;
+        font-size: var(--fs-xs);
         color: var(--faint);
         margin-top: 2px;
+      }
+      .metric-rail__item:first-child {
+        border-top: none;
+        padding-top: 0;
       }
 
       /* ─── Note Block ─── */
@@ -571,13 +586,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         border-top: 1px solid var(--border);
       }
       .note-block h4 {
-        font-size: 13px;
+        font-size: var(--fs-sm);
         font-weight: 600;
         margin-bottom: 6px;
       }
       .note-block p,
       .note-block li {
-        font-size: 13px;
+        font-size: var(--fs-sm);
         line-height: 1.65;
         color: var(--ink-secondary);
       }
@@ -591,16 +606,20 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         content: "\\2022\\00a0";
         color: var(--faint);
       }
+      .module__aside > :first-child {
+        border-top: none;
+        padding-top: 0;
+      }
 
       /* ─── Ledger (Recovery Table) ─── */
       .ledger {
         width: 100%;
         border-collapse: collapse;
-        font-size: 13px;
+        font-size: var(--fs-sm);
       }
       .ledger th {
         text-align: left;
-        font-size: 11px;
+        font-size: var(--fs-xs);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -616,15 +635,18 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       .ledger__row--empty td {
         color: var(--faint);
       }
+      .ledger__name {
+        white-space: nowrap;
+      }
       .ledger__name strong {
         display: block;
-        font-size: 14px;
+        font-size: var(--fs-base);
       }
       .ledger__name small {
         display: block;
         margin-top: 2px;
         color: var(--faint);
-        font-size: 11px;
+        font-size: var(--fs-xs);
       }
       .ledger__val {
         font-variant-numeric: tabular-nums;
@@ -656,13 +678,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         border-top: 1px solid var(--border);
       }
       .activity-stats__item span {
-        font-size: 12px;
+        font-size: var(--fs-sm);
         color: var(--muted);
       }
       .activity-stats__item strong {
         display: block;
         margin-top: 4px;
-        font-size: 20px;
+        font-size: var(--fs-xl);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
@@ -685,12 +707,12 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         margin-bottom: 10px;
       }
       .body-card__label {
-        font-size: 13px;
+        font-size: var(--fs-sm);
         font-weight: 600;
         color: var(--muted);
       }
       .body-card__value {
-        font-size: 24px;
+        font-size: var(--fs-xl);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
@@ -718,7 +740,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         box-shadow: var(--shadow);
       }
       .actions__card h3 {
-        font-size: 15px;
+        font-size: var(--fs-base);
         font-weight: 700;
         margin-bottom: 14px;
       }
@@ -729,7 +751,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         gap: 8px;
       }
       .actions__card li {
-        font-size: 14px;
+        font-size: var(--fs-base);
         line-height: 1.65;
         color: var(--ink-secondary);
       }
@@ -752,7 +774,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         margin-top: 20px;
       }
       .appendix h3 {
-        font-size: 15px;
+        font-size: var(--fs-base);
         font-weight: 700;
         margin-bottom: 12px;
       }
@@ -774,18 +796,158 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         gap: 2px;
       }
       .confidence-list li strong {
-        font-size: 14px;
+        font-size: var(--fs-base);
       }
       .confidence-list li small {
-        font-size: 12px;
+        font-size: var(--fs-sm);
         color: var(--muted);
       }
 
       .disclaimer {
         margin-top: 24px;
-        font-size: 13px;
+        font-size: var(--fs-sm);
         line-height: 1.65;
         color: var(--faint);
+      }
+
+      /* ─── Assessment ─── */
+      .assessment {
+        background: var(--surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-md);
+        margin-bottom: 24px;
+        display: grid;
+        grid-template-columns: 1fr 200px;
+      }
+      .assessment__main {
+        padding: 32px;
+      }
+      .assessment__main h1 {
+        font-size: var(--fs-xl);
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .assessment__text {
+        font-size: var(--fs-base);
+        line-height: 1.8;
+        color: var(--ink-secondary);
+      }
+      .assessment__aside {
+        padding: 32px 28px;
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+      }
+      .scores {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+      }
+      .score-ring {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 12px 0;
+        border-top: 1px solid var(--border);
+      }
+      .score-ring:first-child {
+        border-top: none;
+        padding-top: 0;
+      }
+      .score-ring__value {
+        font-size: var(--fs-2xl);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .score-ring__label {
+        font-size: var(--fs-sm);
+        font-weight: 500;
+        color: var(--muted);
+      }
+      .readiness-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 16px;
+        border-radius: 999px;
+        font-size: var(--fs-base);
+        font-weight: 600;
+      }
+      .readiness--good { background: var(--positive-bg); color: var(--positive); }
+      .readiness--moderate { background: #FFF7ED; color: #D97706; }
+      .readiness--low { background: var(--risk-bg); color: var(--risk); }
+
+      /* ─── Insights Section ─── */
+      .insights-section {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 28px;
+        margin-bottom: 28px;
+      }
+      .insights-section h2 {
+        font-size: var(--fs-lg);
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .insight-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .insight-grid__title {
+        font-size: var(--fs-base);
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      .insight-card {
+        padding: 14px 16px;
+        background: var(--border-light);
+        border-radius: var(--radius-sm);
+        margin-bottom: 10px;
+      }
+      .insight-card:last-child {
+        margin-bottom: 0;
+      }
+      .insight-card p {
+        font-size: var(--fs-base);
+        line-height: 1.7;
+        color: var(--ink-secondary);
+      }
+
+      /* ─── Utility ─── */
+      .section-intro {
+        font-size: var(--fs-sm);
+        line-height: 1.65;
+        color: var(--ink-secondary);
+        margin-bottom: 14px;
+      }
+      .actions--single {
+        grid-template-columns: 1fr;
+      }
+      .appendix__title {
+        font-size: var(--fs-lg);
+        font-weight: 700;
+      }
+      .appendix__list {
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+      }
+      .appendix__list li {
+        font-size: var(--fs-sm);
+        line-height: 1.65;
+        color: var(--ink-secondary);
+      }
+      .footer-link {
+        margin-top: 12px;
+        font-size: var(--fs-sm);
+      }
+      .footer-link a {
+        color: var(--muted);
       }
 
       /* ─── Responsive ─── */
@@ -795,6 +957,24 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         }
         .summary-cards .metric-card {
           flex: 1 1 calc(50% - 16px);
+        }
+        .assessment {
+          grid-template-columns: 1fr;
+        }
+        .assessment__aside {
+          border-left: 0;
+          border-top: 1px solid var(--border);
+          flex-direction: row;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .scores {
+          flex-direction: row;
+          justify-content: center;
+        }
+        .score-ring {
+          border-top: none;
+          padding-top: 0;
         }
         .module__body {
           grid-template-columns: 1fr;
@@ -812,161 +992,76 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         .body-grid {
           grid-template-columns: 1fr;
         }
-        .topbar__nav {
-          display: none;
-        }
         .insight-grid {
           grid-template-columns: 1fr;
         }
+        .topbar__nav {
+          display: none;
+        }
       }
       @media (max-width: 600px) {
+        :root {
+          --fs-2xl: 24px;
+          --fs-xl: 18px;
+        }
         .summary-cards .metric-card {
-          flex: 1 1 100%;
+          flex: 1 1 calc(50% - 16px);
         }
         main {
           padding: 16px 12px 48px;
         }
+
+        /* Topbar */
         .topbar {
           padding: 0 12px;
+          height: 44px;
         }
+        .topbar__title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .topbar__date {
+          display: none;
+        }
+
+        /* Padding reduction */
+        .assessment__main {
+          padding: 20px 16px;
+        }
+        .assessment__aside {
+          padding: 16px;
+        }
+        .module__header {
+          padding: 14px 16px;
+        }
+        .module__chart,
+        .module__aside {
+          padding: 16px;
+        }
+        .overview,
+        .insights-section,
+        .appendix {
+          padding: 20px 16px;
+        }
+        .actions__card {
+          padding: 20px 16px;
+        }
+        .body-grid {
+          padding: 16px;
+        }
+
+        /* Ledger: show name + latest + delta only */
         .ledger th:nth-child(n+3),
         .ledger__row td:nth-child(n+4) {
           display: none;
         }
+        .ledger__spark {
+          display: none;
+        }
+
         .activity-stats {
           grid-template-columns: 1fr;
         }
-      }
-
-      /* ─── Assessment ─── */
-      .assessment {
-        background: var(--surface);
-        border-radius: var(--radius);
-        padding: 32px;
-        box-shadow: var(--shadow-md);
-        margin-bottom: 24px;
-      }
-      .assessment h1 {
-        font-size: 22px;
-        font-weight: 700;
-        margin-bottom: 16px;
-      }
-      .assessment__text {
-        font-size: 15px;
-        line-height: 1.8;
-        color: var(--ink-secondary);
-        max-width: 72ch;
-        margin-bottom: 24px;
-      }
-      .scores {
-        display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-      }
-      .score-ring {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        min-width: 90px;
-      }
-      .score-ring__value {
-        font-size: 32px;
-        font-weight: 800;
-        font-variant-numeric: tabular-nums;
-        line-height: 1;
-      }
-      .score-ring__label {
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--muted);
-      }
-      .readiness-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 16px;
-        border-radius: 999px;
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .readiness--good { background: var(--positive-bg); color: var(--positive); }
-      .readiness--moderate { background: #FFF7ED; color: #D97706; }
-      .readiness--low { background: var(--risk-bg); color: var(--risk); }
-
-      /* ─── Insights Section ─── */
-      .insights-section {
-        background: var(--surface);
-        border-radius: var(--radius);
-        padding: 28px;
-        margin-bottom: 28px;
-      }
-      .insights-section h2 {
-        font-size: 18px;
-        font-weight: 700;
-        margin-bottom: 16px;
-      }
-      .insight-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
-      }
-      .insight-card {
-        padding: 14px 16px;
-        background: var(--border-light);
-        border-radius: var(--radius-sm);
-        margin-bottom: 10px;
-      }
-      .insight-card:last-child {
-        margin-bottom: 0;
-      }
-      .insight-card p {
-        font-size: 14px;
-        line-height: 1.7;
-        color: var(--ink-secondary);
-      }
-      .insight-card h4 {
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 6px;
-        color: var(--ink);
-      }
-
-      /* ─── Utility ─── */
-      .section-intro {
-        font-size: 13px;
-        line-height: 1.65;
-        color: var(--ink-secondary);
-        margin-bottom: 14px;
-      }
-      .insight-grid__title {
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 12px;
-      }
-      .actions--single {
-        grid-template-columns: 1fr;
-      }
-      .appendix__title {
-        font-size: 18px;
-        font-weight: 700;
-      }
-      .appendix__list {
-        padding-left: 18px;
-        display: grid;
-        gap: 6px;
-      }
-      .appendix__list li {
-        font-size: 13px;
-        line-height: 1.65;
-        color: var(--ink-secondary);
-      }
-      .footer-link {
-        margin-top: 12px;
-        font-size: 12px;
-      }
-      .footer-link a {
-        color: var(--muted);
       }
 
       /* ─── Print ─── */
@@ -977,7 +1072,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
           box-shadow: none;
           break-inside: avoid;
         }
-        body { font-size: 12px; }
+        body { font-size: var(--fs-sm); }
         html { background: white; }
       }
     </style>
@@ -1019,24 +1114,28 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
 
       <!-- Assessment -->
       <section id="assessment" class="assessment">
-        <h1>综合健康评估</h1>
-        <p class="assessment__text">${escapeHtml(narrative.health_assessment)}</p>
-        <div class="scores">
-          ${cm.compositeAssessment.sleepScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--sleep)">${cm.compositeAssessment.sleepScore}</span><span class="score-ring__label">睡眠</span></div>` : ""}
-          ${cm.compositeAssessment.recoveryScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--recovery)">${cm.compositeAssessment.recoveryScore}</span><span class="score-ring__label">恢复</span></div>` : ""}
-          ${cm.compositeAssessment.activityScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--activity)">${cm.compositeAssessment.activityScore}</span><span class="score-ring__label">活动</span></div>` : ""}
+        <div class="assessment__main">
+          <h1>综合健康评估</h1>
+          <p class="assessment__text">${escapeHtml(narrative.health_assessment)}</p>
+          ${
+            insights.riskFlags.length > 0
+              ? `<div class="pills" style="margin-top:16px">${insights.riskFlags
+                  .map(
+                    (flag) =>
+                      `<span class="pill pill--risk">${escapeHtml(flag.title)}</span>`,
+                  )
+                  .join("")}</div>`
+              : ""
+          }
         </div>
-        ${cm.compositeAssessment.overallReadiness ? `<span class="readiness-badge readiness--${cm.compositeAssessment.overallReadiness}">整体状态：${cm.compositeAssessment.overallReadiness === "good" ? "良好" : cm.compositeAssessment.overallReadiness === "moderate" ? "中等" : "偏低"}</span>` : ""}
-        ${
-          insights.riskFlags.length > 0
-            ? `<div class="pills" style="margin-top:16px">${insights.riskFlags
-                .map(
-                  (flag) =>
-                    `<span class="pill pill--risk">${escapeHtml(flag.title)}</span>`,
-                )
-                .join("")}</div>`
-            : ""
-        }
+        <aside class="assessment__aside">
+          ${cm.compositeAssessment.overallReadiness ? `<span class="readiness-badge readiness--${cm.compositeAssessment.overallReadiness}">整体状态：${cm.compositeAssessment.overallReadiness === "good" ? "良好" : cm.compositeAssessment.overallReadiness === "moderate" ? "中等" : "偏低"}</span>` : ""}
+          <div class="scores">
+            ${cm.compositeAssessment.sleepScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--sleep)">${cm.compositeAssessment.sleepScore}</span><span class="score-ring__label">睡眠</span></div>` : ""}
+            ${cm.compositeAssessment.recoveryScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--recovery)">${cm.compositeAssessment.recoveryScore}</span><span class="score-ring__label">恢复</span></div>` : ""}
+            ${cm.compositeAssessment.activityScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--activity)">${cm.compositeAssessment.activityScore}</span><span class="score-ring__label">活动</span></div>` : ""}
+          </div>
+        </aside>
       </section>
 
       <!-- Cross-Metric Insights -->
@@ -1049,13 +1148,14 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
           </div>
           <div>
             <h3 class="insight-grid__title">行为模式</h3>
-            ${narrative.behavioral_patterns.map((item) => `<div class="insight-card insight-card--pattern"><p>${escapeHtml(item)}</p></div>`).join("")}
+            ${narrative.behavioral_patterns.map((item) => `<div class="insight-card"><p>${escapeHtml(item)}</p></div>`).join("")}
           </div>
         </div>
       </section>
 
       <!-- Findings & Actions -->
       <section class="overview">
+        <h2 class="overview__title">概览</h2>
         <p class="overview__text">${escapeHtml(narrative.overview)}</p>
         <div class="overview__findings">
           <h3>关键发现</h3>
@@ -1097,7 +1197,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             ${insights.analysis.sleep.healthInsights.normalRangeAssessment ? `
             <div class="note-block" style="margin:14px 0;background:var(--sleep-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--sleep);margin-bottom:4px">正常范围评估</h4>
-              <p style="font-size:13px;line-height:1.6">${escapeHtml(insights.analysis.sleep.healthInsights.normalRangeAssessment)}</p>
+              <p>${escapeHtml(insights.analysis.sleep.healthInsights.normalRangeAssessment)}</p>
             </div>` : ""}
           </div>
           <aside class="module__aside">
@@ -1165,7 +1265,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             ${insights.analysis.recovery.healthInsights.normalRangeAssessment ? `
             <div class="note-block" style="margin:14px 0 0 0;background:var(--recovery-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--recovery);margin-bottom:4px">正常范围评估</h4>
-              <p style="font-size:13px;line-height:1.6">${escapeHtml(insights.analysis.recovery.healthInsights.normalRangeAssessment)}</p>
+              <p>${escapeHtml(insights.analysis.recovery.healthInsights.normalRangeAssessment)}</p>
             </div>` : ""}
           </div>
           <aside class="module__aside">
@@ -1220,7 +1320,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             ${insights.analysis.activity.healthInsights.normalRangeAssessment ? `
             <div class="note-block" style="margin:14px 0 0 0;background:var(--activity-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--activity);margin-bottom:4px">WHO 对标评估</h4>
-              <p style="font-size:13px;line-height:1.6">${escapeHtml(insights.analysis.activity.healthInsights.normalRangeAssessment)}</p>
+              <p>${escapeHtml(insights.analysis.activity.healthInsights.normalRangeAssessment)}</p>
             </div>` : ""}
           </div>
           <aside class="module__aside">
@@ -1246,13 +1346,13 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
           <h2 class="module__title">${escapeHtml(bodyChart?.title ?? "身体成分")}</h2>
           ${bodyConf ? `<span class="badge ${confidenceClass(bodyConf.level)}">数据${confidenceLabel(bodyConf.level)}</span>` : ""}
         </div>
-        <p class="section-intro" style="padding:0 24px">${escapeHtml(bodyCallout)}</p>
+        <p class="section-intro" style="padding:16px 24px 0">${escapeHtml(bodyCallout)}</p>
         <div class="body-grid">
           ${bodyChart?.series
             .map((series, index) =>
               renderBodyDetail(series, index === 0 ? "#6B7280" : "#9CA3AF"),
             )
-            .join("") ?? "<p style='color:var(--faint);font-size:13px'>身体成分数据不足。</p>"}
+            .join("") ?? "<p style='color:var(--faint);font-size:var(--fs-sm)'>身体成分数据不足。</p>"}
         </div>
       </section>
 
@@ -1277,7 +1377,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             </div>
             <div class="note-block" style="margin:14px 0;background:var(--menstrual-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--menstrual);margin-bottom:4px">正常范围评估</h4>
-              <p style="font-size:13px;line-height:1.6">${escapeHtml(hi.normalRangeAssessment)}</p>
+              <p>${escapeHtml(hi.normalRangeAssessment)}</p>
             </div>
             ${menstrualPeriodBars ? `<div class="chart-wrap" style="margin-top:14px">
               ${menstrualPeriodBars}
@@ -1285,7 +1385,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
             </div>` : ""}
             <div class="note-block" style="margin:14px 0;background:var(--menstrual-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--menstrual);margin-bottom:4px">出血模式分析</h4>
-              <p style="font-size:13px;line-height:1.6">${escapeHtml(hi.flowPattern)}</p>
+              <p>${escapeHtml(hi.flowPattern)}</p>
             </div>
           </div>
           <aside class="module__aside">
