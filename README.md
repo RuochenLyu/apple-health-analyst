@@ -14,12 +14,20 @@
 - **隐私优先** — 完全本地运行，不调用外部 API，不上传任何数据
 - **离线 HTML 报告** — 单文件，内联 CSS + SVG 图表，双击即开
 
+## 导出 Apple Health 数据
+
+1. 打开 iPhone 上的**健康** App
+2. 点击右上角头像
+3. 滑到底部，点击**导出所有健康数据**
+4. 等待导出完成（数据量大时可能需要几分钟），选择**储存到"文件"**或通过 AirDrop 传到电脑
+5. 得到的 `导出.zip` 就是本工具的输入文件
+
 ## 快速开始
 
 ```bash
 npm install
 npm run build
-node dist/cli.js analyze /path/to/export.zip --out ./output
+node dist/cli.js analyze /path/to/导出.zip --out ./output
 ```
 
 打开 `output/report.html` 查看报告。
