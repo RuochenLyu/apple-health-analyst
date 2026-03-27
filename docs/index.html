@@ -6,14 +6,14 @@
     <title>Apple Health 健康报告</title>
     <style>
       :root {
-        --bg: #F8FAFC;
+        --bg: #F2F2F7;
         --surface: #FFFFFF;
-        --ink: #0F172A;
-        --ink-secondary: #334155;
-        --muted: #64748B;
-        --faint: #94A3B8;
-        --border: #E2E8F0;
-        --border-light: #F1F5F9;
+        --ink: #1C1C1E;
+        --ink-secondary: #3A3A3C;
+        --muted: #8E8E93;
+        --faint: #AEAEB2;
+        --border: #E5E5EA;
+        --border-light: #F2F2F7;
         --sleep: #6366F1;
         --sleep-bg: #EEF2FF;
         --recovery: #10B981;
@@ -26,10 +26,10 @@
         --risk-bg: #FEF2F2;
         --positive: #22C55E;
         --positive-bg: #F0FDF4;
-        --radius: 12px;
-        --radius-sm: 8px;
-        --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-        --shadow-md: 0 4px 12px rgba(0,0,0,0.07);
+        --radius: 10px;
+        --radius-sm: 6px;
+        --shadow: none;
+        --shadow-md: none;
       }
       * { box-sizing: border-box; margin: 0; }
       html {
@@ -139,7 +139,6 @@
         background: var(--surface);
         border-radius: var(--radius);
         padding: 28px;
-        box-shadow: var(--shadow);
         margin-bottom: 28px;
       }
       .overview__text {
@@ -197,7 +196,7 @@
         background: var(--surface);
         border-radius: var(--radius);
         box-shadow: var(--shadow);
-        margin-bottom: 24px;
+        margin-bottom: 36px;
         overflow: hidden;
       }
       .module__header {
@@ -253,14 +252,16 @@
         gap: 18px;
       }
       .module--sleep { border-left: 4px solid var(--sleep); }
+      .module--sleep .module__index { color: var(--sleep); }
       .module--recovery { border-left: 4px solid var(--recovery); }
+      .module--recovery .module__index { color: var(--recovery); }
       .module--activity { border-left: 4px solid var(--activity); }
+      .module--activity .module__index { color: var(--activity); }
       .module--body { border-left: 4px solid var(--body); }
+      .module--body .module__index { color: var(--body); }
 
       .chart-wrap {
-        background: var(--bg);
-        border-radius: var(--radius-sm);
-        padding: 14px 12px 8px;
+        padding: 8px 0 4px;
       }
       .chart-wrap svg {
         width: 100%;
@@ -648,8 +649,7 @@
         background: var(--surface);
         border-radius: var(--radius);
         padding: 28px;
-        box-shadow: var(--shadow);
-        margin-bottom: 24px;
+        margin-bottom: 28px;
       }
       .insights-section h2 {
         font-size: 18px;
@@ -662,13 +662,13 @@
         gap: 24px;
       }
       .insight-card {
-        border-left: 3px solid var(--sleep);
-        padding: 14px 18px;
+        padding: 14px 16px;
         background: var(--border-light);
-        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        border-radius: var(--radius-sm);
+        margin-bottom: 10px;
       }
-      .insight-card--pattern {
-        border-left-color: var(--activity);
+      .insight-card:last-child {
+        margin-bottom: 0;
       }
       .insight-card p {
         font-size: 14px;
@@ -680,6 +680,43 @@
         font-weight: 600;
         margin-bottom: 6px;
         color: var(--ink);
+      }
+
+      /* ─── Utility ─── */
+      .section-intro {
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--ink-secondary);
+        margin-bottom: 14px;
+      }
+      .insight-grid__title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      .actions--single {
+        grid-template-columns: 1fr;
+      }
+      .appendix__title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .appendix__list {
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+      }
+      .appendix__list li {
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--ink-secondary);
+      }
+      .footer-link {
+        margin-top: 12px;
+        font-size: 12px;
+      }
+      .footer-link a {
+        color: var(--muted);
       }
 
       /* ─── Print ─── */
@@ -738,9 +775,7 @@
       <!-- Assessment -->
       <section id="assessment" class="assessment">
         <h1>综合健康评估</h1>
-        <p class="assessment__text">最近 30 天你的整体状态偏稳，睡眠和恢复是明显强项，主要短板不在“睡得够不够”或“练得太狠”，而在活动分布不够均匀。综合评分里睡眠 90/100、恢复 93/100、活动 50/100，说明当前身体恢复能力可以承接现有训练，但工作日活动偏少、周末集中补量，正在限制整体体能和节律的进一步优化。
-
-从历史背景看，近 30 天平均睡眠 8.29 小时，高于过去 180 天的 8.13 小时，深睡占比也比近 90 天高 4.07 个百分点；同时 RHR 和 HRV 的近期趋势方向一致向好。不过恢复均值仍略低于你自己的长期水平，起床时间标准差约 65.58 分钟，因此接下来最值得先做的不是继续加训练量，而是把起床时间和工作日轻活动固定下来。</p>
+        <p class="assessment__text">近 30 天你的整体状态偏稳，综合评分为睡眠 90/100、恢复 93/100、活动 50/100，整体 readiness 为良好。最明显的优势不是单纯“睡得更久”，而是睡眠和恢复同时有支撑：最近 30 天平均睡眠 8.29 小时，高于过去 180 天的 8.13 小时，深睡占比 23.94%，也高于过去 180 天的 20.97%；与此同时，近 30 天后半段静息心率从前半段的 62.14 bpm 降到 60.50 bpm，HRV 从 33.96 ms 升到 39.91 ms，说明近期恢复趋势确实在变好。当前更值得优先处理的是活动分布，而不是总睡眠时长。你近 30 天平均每天锻炼 25.13 分钟，与过去 180 天的 24.23 分钟接近，但运动主要集中在周末，导致活动评分只有 50/100。下一步不需要再加大周末训练量，而是把工作日的轻量活动补起来，让现有的睡眠和恢复优势真正转成更稳定的体能收益。</p>
         <div class="scores">
           <div class="score-ring"><span class="score-ring__value" style="color:var(--sleep)">90</span><span class="score-ring__label">睡眠</span></div>
           <div class="score-ring"><span class="score-ring__value" style="color:var(--recovery)">93</span><span class="score-ring__label">恢复</span></div>
@@ -755,23 +790,23 @@
         <h2>关联分析</h2>
         <div class="insight-grid">
           <div>
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">跨指标发现</h3>
-            <div class="insight-card"><p>近 30 天没有出现少于 6 小时的睡眠夜晚，正常睡眠后的次日 HRV 均值为 36.4 ms、RHR 均值为 62.17 bpm，说明近期恢复波动并不是被明显的睡眠剥夺驱动，当前更值得优先优化的是节律稳定性和活动分布。</p></div><div class="insight-card"><p>有 12 天高运动量，高运动次日 HRV 均值 34.72 ms，接近休息日后的 37.98 ms，说明你目前的训练负荷总体还在可恢复范围内，没有出现典型的“练一天、掉两天”过载模式。</p></div><div class="insight-card"><p>入睡时间标准差 44.19 分钟、起床时间标准差 65.58 分钟；即使近 30 天平均睡眠达到 8.29 小时，节律波动仍可能削弱恢复稳定性，这也是活动得分只有 50 分而睡眠和恢复都在 90 分以上的重要背景。</p></div><div class="insight-card"><p>RHR 与 HRV 在近期趋势上方向一致为改善，但从历史窗口看，近 30 天 RHR 61.27 bpm 仍高于过去 180 天的 59.67 bpm，HRV 39.77 ms 也低于过去 180 天的 41.89 ms，说明恢复状态在回升，但还没有完全回到你更好的长期基线。</p></div>
+            <h3 class="insight-grid__title">跨指标发现</h3>
+            <div class="insight-card"><p>最近 30 天平均睡眠 8.29 小时，高于过去 180 天的 8.13 小时，深睡占比 23.94% 也高于 20.97%；同时近 30 天后半段 HRV 从 33.96 ms 升到 39.91 ms，说明近期更充足、深睡更好的睡眠，确实在支撑恢复。</p></div><div class="insight-card"><p>近期没有睡眠不足 6 小时的夜晚，因此目前测不到“短睡后次日 HRV 下跌”的敏感性；这本身是好消息，说明这 30 天的恢复判断没有被明显的睡眠赤字拖累。</p></div><div class="insight-card"><p>你有 12 天高运动量，次日 HRV 均值 34.72 ms，接近休息日后的 37.98 ms，说明当前拳击和力量训练负荷总体仍在可恢复范围内；2026-03-07 当天同时出现 10.18 小时睡眠、82 分钟训练和 45.07 ms HRV，是一次典型的“高负荷但恢复跟得上”样本。</p></div><div class="insight-card"><p>需要把短期改善和长周期背景分开看：近 30 天后半段静息心率从 62.14 bpm 降到 60.50 bpm、HRV 从 33.96 ms 升到 39.91 ms，但近 30 天整体均值仍是静息心率 61.27 bpm 高于过去 180 天的 59.67 bpm，HRV 39.77 ms 低于过去 180 天的 41.89 ms，说明你最近两周在回升，但还没完全回到过去半年的恢复底盘。</p></div>
           </div>
           <div>
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">行为模式</h3>
-            <div class="insight-card insight-card--pattern"><p>周末战士模式：周末平均运动 50 分钟，是工作日 16 分钟的 3 倍。你目前还能把这类集中负荷恢复回来，但这种分布会让工作周的代谢刺激和节律刺激不够稳定，也更难把活动评分拉高。建议把周末其中 2 次训练量拆到工作日，每次补 15-20 分钟快走、拳击基础练习或力量辅助。</p></div>
+            <h3 class="insight-grid__title">行为模式</h3>
+            <div class="insight-card insight-card--pattern"><p>周末战士模式：周末平均运动 50 分钟，是工作日 16 分钟的 3 倍。现在恢复还能跟上，但长期把负荷堆在 1-2 天，受伤和疲劳波动风险会更高；接下来两周更值得做的是在工作日补轻量活动，而不是继续把主要训练放在周末。</p></div><div class="insight-card insight-card--pattern"><p>作息存在中度波动：入睡时间标准差 44.19 分钟，但起床标准差达到 65.58 分钟，说明你的节律噪声主要来自起床端而不是上床端。这种波动暂时没有压低总睡眠时长，却会削弱深睡质量和白天状态的稳定性，优先固定起床时间比追求更早入睡更有效。</p></div>
           </div>
         </div>
       </section>
 
       <!-- Findings & Actions -->
       <section class="overview">
-        <p class="overview__text">这次判断同时参考了最近 30 天、过去 180 天和整个可用历史。当前优先级不是“再多练一点”，而是把已经不错的睡眠和恢复，转化成更稳定的日常活动节奏：维持 8 小时左右睡眠、固定起床锚点，并把周末集中运动拆散到工作日。这样最有机会同时抬高活动维度，并让 HRV 和 RHR 更接近你自己的长期较优水平。</p>
+        <p class="overview__text">这次判断同时参考了最近 30 天、过去 180 天和整个可用历史。你的近期状态更像“睡眠和恢复先行、活动一致性滞后”：最近 30 天平均睡眠 8.29 小时，高于全时段的 8.06 小时；最近 30 天平均体重 72.63 kg，低于全时段 73.06 kg；但平均每天锻炼 25.13 分钟只比过去 180 天的 24.23 分钟略高，且运动明显集中在周末。下一阶段不需要追求更长睡眠或更快减重，而是把训练频率分散到工作日，让现有恢复优势变成更稳定的日常状态。</p>
         <div class="overview__findings">
           <h3>关键发现</h3>
           <ol>
-            <li>综合评分显示睡眠 90、恢复 93、活动 50；再结合 12 个高运动日次日 HRV 34.72 ms 仅略低于休息日后的 37.98 ms，可见你的恢复能力能承接当前负荷，真正的短板是活动分布的一致性，而不是恢复能力不足。</li><li>近 30 天平均睡眠 8.29 小时，比近 90 天多 0.22 小时，深睡占比高 4.07 个百分点；同时近期没有少于 6 小时的睡眠夜晚，说明你已经把“睡不够”这个最常见的恢复风险控制得比较好。</li><li>RHR 和 HRV 在近期趋势上同向改善，但近 30 天 RHR 61.27 bpm 仍高于过去 180 天 59.67 bpm，HRV 39.77 ms 低于过去 180 天 41.89 ms，提示恢复在变好，但尚未回到你更理想的历史区间。</li><li>周末平均运动 50 分钟、工作日仅 16 分钟，再叠加入睡标准差 44.19 分钟和起床标准差 65.58 分钟，说明当前限制整体状态继续上台阶的不是单次训练质量，而是作息与活动节奏的稳定性。</li>
+            <li>2026-03-07 是近期最完整的正向样本：当天同时出现 10.18 小时睡眠、82 分钟训练和 45.07 ms HRV，高于近 30 天 HRV 均值 36.94 ms，说明高训练日只要把睡眠补足，你的恢复系统能接住负荷。</li><li>2026-03-22 是近期最值得复盘的一天：静息心率 78 bpm 为阶段最高，同时 HRV 33.45 ms 低于近 30 天均值 36.94 ms，血氧也降到 93.5%。这还不是持续异常，但这种“静息心率冲高 + HRV 走弱”的组合值得回看前一晚恢复、压力和训练安排。</li><li>短期趋势在修复，但长周期还没完全回到高点：近 30 天后半段静息心率 60.50 bpm 低于前半段 62.14 bpm，HRV 39.91 ms 高于 33.96 ms；但放到过去 180 天看，静息心率 61.27 bpm 仍高于 59.67 bpm，HRV 39.77 ms 仍低于 41.89 ms。</li><li>作息总时长充足，但节律稳定性一般：最近 30 天平均睡 8.29 小时，且没有任何一晚低于 6 小时；不过起床标准差 65.58 分钟，高于入睡标准差 44.19 分钟，提示现在更需要收紧起床时间，而不是继续拉长睡眠。</li>
           </ol>
         </div>
         <div class="pills"><span class="pill pill--info">已有 2 个睡眠夜晚因记录不完整被排除。</span><span class="pill pill--info">最大摄氧量 缺少足够近期样本。</span></div>
@@ -786,7 +821,7 @@
         </div>
         <div class="module__body">
           <div class="module__chart">
-            <p class="note-block" style="border-top:none;padding-top:0;margin-bottom:14px;font-size:13px;color:var(--ink-secondary)">近 30 天平均睡眠 8.29 小时，较近 90 天增加 0.22 小时，深睡占比提高 4.07 个百分点；这张图最值得关注的是睡得够的同时，起床时间仍有较大波动。</p>
+            <p class="section-intro">近 30 天平均睡眠 8.29 小时，高于过去 180 天的 8.13 小时，深睡占比 23.94% 也高于 20.97%；这张图更该关注的是起床时间波动，而不是继续追求更长时长。</p>
             <div class="chart-wrap">
               <svg viewBox="0 0 700 220" role="img" aria-label="趋势图" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
   <line x1="48" y1="16" x2="684" y2="16" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="20" text-anchor="end" font-size="10" fill="#94A3B8">39.7</text><line x1="48" y1="58" x2="684" y2="58" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="62" text-anchor="end" font-size="10" fill="#94A3B8">30.8</text><line x1="48" y1="100" x2="684" y2="100" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="104" text-anchor="end" font-size="10" fill="#94A3B8">21.8</text><line x1="48" y1="142" x2="684" y2="142" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="146" text-anchor="end" font-size="10" fill="#94A3B8">12.8</text><line x1="48" y1="184" x2="684" y2="184" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="188" text-anchor="end" font-size="10" fill="#94A3B8">3.9</text>
@@ -828,7 +863,7 @@
         </div>
         <div class="module__body">
           <div class="module__chart">
-            <p class="note-block" style="border-top:none;padding-top:0;margin-bottom:14px;font-size:13px;color:var(--ink-secondary)">RHR 与 HRV 的近期趋势方向一致向好，但 30 天均值仍未回到 180 天基线；观察重点是作息更稳后，这两条曲线是否继续向你的长期较优区间靠近。</p>
+            <p class="section-intro">近 30 天后半段静息心率从 62.14 bpm 降到 60.50 bpm，HRV 从 33.96 ms 升到 39.91 ms，短期恢复趋势在变好；但放到过去 180 天看，整体底盘还没有完全回到高点。</p>
             <table class="ledger">
               <thead>
                 <tr>
@@ -914,7 +949,7 @@
             <div class="note-block">
               <h4>重点留意</h4>
               <ul>
-                <li>活动集中在周末，活动维度仅 50/100；如果继续依赖周末补量，长期更容易出现工作日刺激不足、周末负荷偏集中的模式。</li><li>作息规律性只有 moderate，尤其起床时间标准差 65.58 分钟，容易抵消一部分高睡眠时长带来的恢复收益。</li><li>近 30 天恢复均值仍低于自己的长期水平：RHR 61.27 bpm 高于全时段 59.16 bpm，HRV 39.77 ms 低于全时段 43.8 ms，需要继续观察是否能通过更稳定的节律回升。</li>
+                <li>活动分布不均是当前最明确的短板：周末平均运动 50 分钟，是工作日 16 分钟的 3 倍，这也是活动评分只有 50/100 的主要原因。</li><li>起床时间波动偏大：起床标准差 65.58 分钟，已经明显高于入睡端的 44.19 分钟，即使总睡眠够，也会削弱节律稳定性。</li><li>恢复有短期回升，但还没有完全回到过去半年的底盘：近 30 天 HRV 39.77 ms 低于过去 180 天 41.89 ms，静息心率 61.27 bpm 高于 59.67 bpm。</li>
               </ul>
             </div>
           </aside>
@@ -930,7 +965,7 @@
         </div>
         <div class="module__body">
           <div class="module__chart">
-            <p class="note-block" style="border-top:none;padding-top:0;margin-bottom:14px;font-size:13px;color:var(--ink-secondary)">总活动量不低，但周末平均运动 50 分钟、工作日仅 16 分钟；这里比总量更重要的是分布是否均匀。</p>
+            <p class="section-intro">近 30 天平均每天锻炼 25.13 分钟，与过去 180 天的 24.23 分钟接近；真正的问题不是总量不足，而是周末平均 50 分钟、工作日只有 16 分钟，活动一致性拖低了评分。</p>
             <div class="chart-wrap">
               <svg viewBox="0 0 700 220" role="img" aria-label="趋势图" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
   <line x1="48" y1="16" x2="684" y2="16" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="20" text-anchor="end" font-size="10" fill="#94A3B8">942</text><line x1="48" y1="58" x2="684" y2="58" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="62" text-anchor="end" font-size="10" fill="#94A3B8">685</text><line x1="48" y1="100" x2="684" y2="100" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="104" text-anchor="end" font-size="10" fill="#94A3B8">428</text><line x1="48" y1="142" x2="684" y2="142" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="146" text-anchor="end" font-size="10" fill="#94A3B8">171</text><line x1="48" y1="184" x2="684" y2="184" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="42" y="188" text-anchor="end" font-size="10" fill="#94A3B8">-85.6</text>
@@ -963,7 +998,7 @@
             <div class="note-block">
               <h4>接下来两周</h4>
               <ul>
-                <li>未来 14 天把起床时间固定在 07:30-08:00 区间，周末也尽量不要比工作日晚超过 30 分钟；先稳住起床锚点，再让入睡时间自然回到 23:00-23:30。</li><li>每周一到周五至少安排 3 天 15-20 分钟轻中等强度活动，把周末其中 2 次训练量拆到工作日，目标是把工作日平均运动时间从 16 分钟提高到至少 20 分钟。</li><li>每次高运动日后的次日只安排 20-30 分钟低强度恢复活动或拉伸，不再连续堆两天高强度；连续执行 2 周后，再看 HRV 是否比当前近 30 天均值 39.77 ms 更稳定。</li><li>未来 2 周继续保持 Withings 睡眠和体重记录完整，尤其避免再次出现整夜睡眠缺失；这样下轮分析才能更准确判断恢复均值是否回到 180 天基线。</li>
+                <li>未来 14 天把起床时间尽量固定在 07:30-08:00，周末也不要比工作日晚超过 30 分钟，目标是把现在 65.58 分钟的起床波动压到 30 分钟内。</li><li>每周至少 3 个工作日补 15-20 分钟低到中等强度活动，例如快走、骑车或拉伸，先把工作日平均运动从 16 分钟抬到 30 分钟左右，不要继续把主要负荷堆到周末。</li><li>维持当前 8 小时以上的睡眠底盘，但把上床时间尽量收在 23:00-23:45；你的近期中位入睡时间是 23:22，现阶段重点不是更早睡，而是减少波动。</li><li>每次 60 分钟以上的拳击或力量训练后，次日早晨记录一次主观疲劳和静息状态；如果连续 2 次看到 HRV 落到 33 ms 左右或静息心率升到 70 bpm 以上，当天训练改成步行或拉伸。</li>
               </ul>
             </div>
           </aside>
@@ -977,7 +1012,7 @@
           <h2 class="module__title">身体成分趋势</h2>
           <span class="badge badge--ok">数据充足</span>
         </div>
-        <p class="note-block" style="border-top:none;padding:0 24px 0;margin:14px 0 0;font-size:13px;color:var(--ink-secondary)">体重和体脂近 30 天基本稳定并略降，说明当前训练与饮食至少处于可维持状态，可作为节律调整后的观察锚点。</p>
+        <p class="section-intro" style="padding:0 24px">近 30 天平均体重 72.63 kg、体脂 16.25%，较过去 90 天分别下降 0.29 kg 和 0.10 个百分点，整体处于稳定、轻微改善状态。</p>
         <div class="body-grid">
           <div class="body-card">
     <div class="body-card__head">
@@ -1008,25 +1043,35 @@
         <div class="actions__card">
           <h3>接下来两周建议</h3>
           <ol>
-            <li>未来 14 天把起床时间固定在 07:30-08:00 区间，周末也尽量不要比工作日晚超过 30 分钟；先稳住起床锚点，再让入睡时间自然回到 23:00-23:30。</li><li>每周一到周五至少安排 3 天 15-20 分钟轻中等强度活动，把周末其中 2 次训练量拆到工作日，目标是把工作日平均运动时间从 16 分钟提高到至少 20 分钟。</li><li>每次高运动日后的次日只安排 20-30 分钟低强度恢复活动或拉伸，不再连续堆两天高强度；连续执行 2 周后，再看 HRV 是否比当前近 30 天均值 39.77 ms 更稳定。</li><li>未来 2 周继续保持 Withings 睡眠和体重记录完整，尤其避免再次出现整夜睡眠缺失；这样下轮分析才能更准确判断恢复均值是否回到 180 天基线。</li>
+            <li>未来 14 天把起床时间尽量固定在 07:30-08:00，周末也不要比工作日晚超过 30 分钟，目标是把现在 65.58 分钟的起床波动压到 30 分钟内。</li><li>每周至少 3 个工作日补 15-20 分钟低到中等强度活动，例如快走、骑车或拉伸，先把工作日平均运动从 16 分钟抬到 30 分钟左右，不要继续把主要负荷堆到周末。</li><li>维持当前 8 小时以上的睡眠底盘，但把上床时间尽量收在 23:00-23:45；你的近期中位入睡时间是 23:22，现阶段重点不是更早睡，而是减少波动。</li><li>每次 60 分钟以上的拳击或力量训练后，次日早晨记录一次主观疲劳和静息状态；如果连续 2 次看到 HRV 落到 33 ms 左右或静息心率升到 70 bpm 以上，当天训练改成步行或拉伸。</li>
           </ol>
         </div>
         <div class="actions__card actions__card--warn">
           <h3>何时建议复查或就医</h3>
           <ul>
-            <li>如果后续静息心率连续多天明显高于你近期常见的 58-61 bpm 区间，同时 HRV 持续走低并伴随明显疲劳、胸闷、头晕或运动耐受下降，建议复查并咨询医生。</li><li>如果血氧后续多次低于你近期常见的 95-96% 区间，或同时出现呼吸不适、夜间憋醒等情况，建议尽快就医评估。</li><li>如果没有刻意减脂却在 2 周内出现体重快速下降，或睡眠与恢复数据持续恶化并伴随明显不适，也建议寻求专业评估。</li>
+            <li>如果未来 1-2 周反复出现像 2026-03-22 这样的组合：静息心率接近或超过 78 bpm，同时 HRV 降到 33 ms 左右，并伴随明显疲劳、胸闷、头晕或运动耐受下降，建议咨询医生。</li><li>如果血氧读数不再只是偶发，而是多次接近 93%-94% 或更低，尤其伴随打鼾、晨起头痛、夜间憋醒或白天异常困倦，建议做进一步评估。</li><li>如果睡眠记录恢复完整后，HRV 仍连续多天明显低于你近 30 天均值 39.77 ms，例如持续落在 27-30 ms 区间，同时静息心率上升，建议尽快复查近期压力、感染或训练负荷因素。</li>
           </ul>
+        </div>
+      </div>
+
+      <!-- Doctor Questions -->
+      <div class="actions actions--single">
+        <div class="actions__card">
+          <h3>下次看诊可以问医生的问题</h3>
+          <ol>
+            <li>我最近 30 天静息心率均值 61.27 bpm，高于过去 180 天的 59.67 bpm，而 HRV 均值 39.77 ms 低于 41.89 ms；这种“长周期恢复底盘略弱、但近两周在回升”的情况，是否需要结合体检或化验进一步看恢复状态？</li><li>2026-03-22 我出现过静息心率 78 bpm、HRV 33.45 ms、血氧 93.5% 的组合，但之后没有持续恶化；这种单次波动通常需要关注到什么程度，哪些症状出现时应该进一步检查？</li><li>我的睡眠近 30 天平均 8.29 小时，但起床标准差 65.58 分钟；如果想改善节律稳定性和白天状态，是否有必要做睡眠相关评估，还是先做生活方式调整更合适？</li>
+          </ol>
         </div>
       </div>
 
       <!-- Appendix -->
       <section id="appendix" class="appendix">
-        <h2 style="font-size:18px;font-weight:700">数据边界与补充提示</h2>
+        <h2 class="appendix__title">数据边界与补充提示</h2>
         <div class="appendix__grid">
           <div>
             <h3>数据局限</h3>
-            <ul style="padding-left:18px;display:grid;gap:6px">
-              <li style="font-size:13px;line-height:1.65;color:var(--ink-secondary)">已有 2 个睡眠夜晚因记录不完整被排除，其中 2026-03-24 仅记录到 1.65 小时睡眠。</li><li style="font-size:13px;line-height:1.65;color:var(--ink-secondary)">近期没有少于 6 小时的睡眠夜晚，因此暂时无法直接评估“短睡后次日 HRV / RHR 会下降多少”。</li><li style="font-size:13px;line-height:1.65;color:var(--ink-secondary)">VO2 Max 最近 30 天没有有效样本，无法判断有氧能力的近期变化。</li><li style="font-size:13px;line-height:1.65;color:var(--ink-secondary)">恢复指标主要来自 Apple Watch，且各项指标按主数据源分别汇报、不跨设备合并，因此恢复相关结论更适合理解为趋势参考。</li>
+            <ul class="appendix__list">
+              <li>已有 2 个睡眠夜晚因记录不完整被排除，其中 2026-03-24 仅记录到 1.65 小时睡眠；这会削弱对最近几天恢复波动的解释把握。</li><li>最大摄氧量近期样本不足，最近 30 天没有可用值，因此这份报告无法判断心肺适能是否同步变化。</li><li>恢复指标整体可信度为中等，主要来自 Apple Watch；睡眠和身体成分则来自 Withings。跨设备联读更适合看趋势，不适合拿单日数值做过度精确的比较。</li><li>呼吸频率近 30 天只有 1 个样本，值为 9 次/分，样本太少，不能据此判断真实呼吸趋势。</li>
             </ul>
           </div>
           <div>
@@ -1061,7 +1106,7 @@
           </div>
         </div>
         <div class="disclaimer">本报告仅用于健康管理和生活方式调整参考，不构成医疗诊断、治疗建议或替代专业医生意见。</div>
-        <div class="disclaimer" style="margin-top:12px;font-size:12px">Generated by <a href="https://github.com/RuochenLyu/apple-health-analyst" style="color:var(--muted)">apple-health-analyst</a></div>
+        <div class="disclaimer footer-link">Generated by <a href="https://github.com/RuochenLyu/apple-health-analyst">apple-health-analyst</a></div>
       </section>
     </main>
   </body>
