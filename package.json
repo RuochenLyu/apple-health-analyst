@@ -1,6 +1,6 @@
 {
   "name": "apple-health-analyst",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Privacy-first Apple Health export analyzer. Parses HealthKit data locally, generates cross-metric insights, and renders professional health reports (HTML/Markdown) with bilingual support. Designed as an agent skill for Codex and Claude Code.",
   "type": "module",
   "bin": {
