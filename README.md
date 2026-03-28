@@ -52,13 +52,13 @@ Commands used under the hood by the Codex Skill. Usually no need to run manually
 
 ```bash
 # 1. prepare: Parse ZIP, generate structured data (--lang en for English, --lang zh for Chinese)
-node dist/cli.js prepare /path/to/Export.zip --lang en --out ./output
+npx apple-health-analyst prepare /path/to/Export.zip --lang en --out ./output
 # Outputs summary.json + insights.json
 
 # 2. (Codex reads insights.json, generates report.llm.json)
 
 # 3. render: Produce final report (language auto-detected from insights.json)
-node dist/cli.js render \
+npx apple-health-analyst render \
   --insights ./output/insights.json \
   --narrative ./output/report.llm.json \
   --out ./output
