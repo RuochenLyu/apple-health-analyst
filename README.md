@@ -33,11 +33,13 @@ Install the skill with one command (works with Claude Code, Codex, Cursor, and [
 npx skills add RuochenLyu/apple-health-analyst
 ```
 
-Then just chat with your agent:
+Then chat with your agent:
 
 ```text
-Use $apple-health-analyst to analyze /path/to/export.zip
+Analyze my Apple Health export at /path/to/export.zip
 ```
+
+The skill activates automatically when you mention Apple Health analysis. You can also invoke it explicitly — `/apple-health-analyst` in Claude Code, or `$apple-health-analyst` in Codex.
 
 The agent automatically completes the full **prepare → LLM narrative → render** pipeline, producing a health-advisor-grade report.
 

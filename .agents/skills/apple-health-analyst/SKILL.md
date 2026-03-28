@@ -5,7 +5,7 @@ description: Analyze Apple Health export ZIP. Run local prepare to generate stru
 
 # Apple Health Advisor
 
-Use this skill when a user wants to analyze an Apple Health export ZIP in Codex, and the ZIP is too large to fit directly into context.
+Use this skill when a user wants to analyze an Apple Health export ZIP. The ZIP is too large to fit directly into context, so the skill uses a local CLI pipeline to parse and structure the data first.
 
 ## Language Detection
 

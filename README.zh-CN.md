@@ -31,11 +31,13 @@
 npx skills add RuochenLyu/apple-health-analyst
 ```
 
-然后直接和 agent 对话：
+然后和 agent 对话：
 
 ```text
-使用 $apple-health-analyst 分析 /path/to/导出.zip
+帮我分析一下 Apple Health 导出数据 /path/to/导出.zip
 ```
+
+Skill 会在你提到 Apple Health 分析时自动激活。也可以显式调用——Claude Code 中用 `/apple-health-analyst`，Codex 中用 `$apple-health-analyst`。
 
 Agent 会自动完成 **prepare → LLM 写 narrative → render** 全流程，生成健康顾问级报告。
 

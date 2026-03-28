@@ -20,6 +20,14 @@
     "agent-skills"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RuochenLyu/apple-health-analyst.git"
+  },
+  "homepage": "https://github.com/RuochenLyu/apple-health-analyst",
+  "bugs": {
+    "url": "https://github.com/RuochenLyu/apple-health-analyst/issues"
+  },
   "files": [
     "dist",
     "README.md",
