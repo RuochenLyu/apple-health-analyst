@@ -1,13 +1,13 @@
 {
   "name": "apple-health-analyst",
   "version": "1.0.0",
-  "description": "面向 Codex skill 的 Apple Health 本地分析工具，输出结构化洞察、LLM narrative 和离线 HTML 报告。",
+  "description": "Privacy-first Apple Health export analyzer. Parses HealthKit data locally, generates cross-metric insights, and renders professional health reports (HTML/Markdown) with bilingual support. Designed as an agent skill for Codex and Claude Code.",
   "type": "module",
   "bin": {
-    "apple-health-analyst": "./dist/cli.js"
+    "apple-health-analyst": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
     "test": "vitest run",
     "dev": "tsx src/cli.ts",
     "check": "npm run build && npm test"
@@ -16,7 +16,8 @@
     "apple-health",
     "healthkit",
     "cli",
-    "codex-skill"
+    "codex-skill",
+    "agent-skills"
   ],
   "license": "MIT",
   "files": [

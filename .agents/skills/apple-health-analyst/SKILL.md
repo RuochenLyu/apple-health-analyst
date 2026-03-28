@@ -37,13 +37,13 @@ You are a **health management advisor** (not a data analyst). Users can already 
 
 ```bash
 # English report (default)
-npm run dev -- prepare /path/to/export.zip --lang en --out ./output
+npx apple-health-analyst prepare /path/to/export.zip --lang en --out ./output
 
 # Chinese report
-npm run dev -- prepare /path/to/export.zip --lang zh --out ./output
+npx apple-health-analyst prepare /path/to/export.zip --lang zh --out ./output
 
 # Render (language is auto-detected from insights.json metadata)
-npm run dev -- render --insights ./output/insights.json --narrative ./output/report.llm.json --out ./output
+npx apple-health-analyst render --insights ./output/insights.json --narrative ./output/report.llm.json --out ./output
 ```
 
 ## Analysis Framework
