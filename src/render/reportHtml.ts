@@ -272,6 +272,10 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(t.reportTitle)}</title>
+    <meta property="og:title" content="${escapeHtml(t.reportTitle)}" />
+    <meta property="og:description" content="${escapeHtml(t.footerTagline)}" />
+    <meta property="og:type" content="article" />
+    <meta name="description" content="${escapeHtml(t.footerTagline)}" />
     <style>
       :root {
         --bg: #F2F2F7;
@@ -370,7 +374,7 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
       main {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 24px 20px 64px;
+        padding: 24px 20px 0;
       }
       section {
         scroll-margin-top: 64px;
@@ -973,12 +977,52 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         line-height: 1.65;
         color: var(--ink-secondary);
       }
-      .footer-link {
-        margin-top: 12px;
-        font-size: var(--fs-sm);
-      }
-      .footer-link a {
+      /* ─── Site Footer ─── */
+      .site-footer {
+        margin-top: 0;
+        padding: 24px 20px 32px;
+        text-align: center;
         color: var(--muted);
+        font-size: var(--fs-sm);
+        line-height: 1.6;
+      }
+      .site-footer__brand {
+        font-size: var(--fs-base);
+        font-weight: 600;
+        color: var(--ink-secondary);
+        text-decoration: none;
+      }
+      .site-footer__brand:hover {
+        color: var(--ink);
+      }
+      .site-footer__tagline {
+        margin-top: 4px;
+        color: var(--faint);
+        font-size: var(--fs-xs);
+      }
+      .site-footer__links {
+        display: inline-flex;
+        align-items: center;
+        gap: 20px;
+        margin-top: 14px;
+      }
+      .site-footer__links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: var(--fs-sm);
+        transition: color 0.15s;
+      }
+      .site-footer__links a:hover {
+        color: var(--ink);
+      }
+      .site-footer__links svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+        flex-shrink: 0;
       }
 
       /* ─── Responsive ─── */
@@ -1095,9 +1139,33 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         }
       }
 
+      /* ─── GitHub Link (topbar) ─── */
+      .topbar__github {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px;
+        border-radius: 50%;
+        color: var(--muted);
+        text-decoration: none;
+        transition: background 0.15s, color 0.15s;
+        flex-shrink: 0;
+        margin-left: 6px;
+      }
+      .topbar__github:hover {
+        background: var(--border-light);
+        color: var(--ink);
+      }
+      .topbar__github svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+        display: block;
+      }
+
       /* ─── Print ─── */
       @media print {
-        .topbar { display: none; }
+        .topbar, .site-footer { display: none; }
         main { padding: 0; max-width: none; }
         .module, .overview, .actions__card, .appendix, .metric-card {
           box-shadow: none;
@@ -1121,6 +1189,9 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
         <a href="#body">${escapeHtml(t.navBody)}</a>
         ${menstrualChart ? `<a href="#menstrual">${escapeHtml(t.navMenstrual)}</a>` : ""}
         <a href="#appendix">${escapeHtml(t.navAppendix)}</a>
+        <a href="https://github.com/RuochenLyu/apple-health-analyst" class="topbar__github" aria-label="GitHub" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
       </div>
     </nav>
 
@@ -1506,9 +1577,19 @@ export function renderReportHtml(insights: InsightBundle, narrative: NarrativeRe
           </div>
         </div>
         <div class="disclaimer">${escapeHtml(narrative.disclaimer)}</div>
-        <div class="disclaimer footer-link">${escapeHtml(t.footerGeneratedBy)} <a href="https://github.com/RuochenLyu/apple-health-analyst">apple-health-analyst</a></div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <a href="https://github.com/RuochenLyu/apple-health-analyst" class="site-footer__brand" target="_blank" rel="noopener">apple-health-analyst</a>
+      <div class="site-footer__tagline">${escapeHtml(t.footerTagline)}</div>
+      <div class="site-footer__links">
+        <a href="https://github.com/RuochenLyu/apple-health-analyst" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </footer>
   </body>
 </html>
 `;

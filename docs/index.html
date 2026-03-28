@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Apple Health Report</title>
+    <meta property="og:title" content="Apple Health Report" />
+    <meta property="og:description" content="Privacy-first Apple Health analytics" />
+    <meta property="og:type" content="article" />
+    <meta name="description" content="Privacy-first Apple Health analytics" />
     <style>
       :root {
         --bg: #F2F2F7;
@@ -102,7 +106,7 @@
       main {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 24px 20px 64px;
+        padding: 24px 20px 0;
       }
       section {
         scroll-margin-top: 64px;
@@ -705,12 +709,52 @@
         line-height: 1.65;
         color: var(--ink-secondary);
       }
-      .footer-link {
-        margin-top: 12px;
-        font-size: var(--fs-sm);
-      }
-      .footer-link a {
+      /* ─── Site Footer ─── */
+      .site-footer {
+        margin-top: 0;
+        padding: 24px 20px 32px;
+        text-align: center;
         color: var(--muted);
+        font-size: var(--fs-sm);
+        line-height: 1.6;
+      }
+      .site-footer__brand {
+        font-size: var(--fs-base);
+        font-weight: 600;
+        color: var(--ink-secondary);
+        text-decoration: none;
+      }
+      .site-footer__brand:hover {
+        color: var(--ink);
+      }
+      .site-footer__tagline {
+        margin-top: 4px;
+        color: var(--faint);
+        font-size: var(--fs-xs);
+      }
+      .site-footer__links {
+        display: inline-flex;
+        align-items: center;
+        gap: 20px;
+        margin-top: 14px;
+      }
+      .site-footer__links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: var(--fs-sm);
+        transition: color 0.15s;
+      }
+      .site-footer__links a:hover {
+        color: var(--ink);
+      }
+      .site-footer__links svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+        flex-shrink: 0;
       }
 
       /* ─── Responsive ─── */
@@ -827,9 +871,33 @@
         }
       }
 
+      /* ─── GitHub Link (topbar) ─── */
+      .topbar__github {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px;
+        border-radius: 50%;
+        color: var(--muted);
+        text-decoration: none;
+        transition: background 0.15s, color 0.15s;
+        flex-shrink: 0;
+        margin-left: 6px;
+      }
+      .topbar__github:hover {
+        background: var(--border-light);
+        color: var(--ink);
+      }
+      .topbar__github svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+        display: block;
+      }
+
       /* ─── Print ─── */
       @media print {
-        .topbar { display: none; }
+        .topbar, .site-footer { display: none; }
         main { padding: 0; max-width: none; }
         .module, .overview, .actions__card, .appendix, .metric-card {
           box-shadow: none;
@@ -853,6 +921,9 @@
         <a href="#body">Body</a>
         
         <a href="#appendix">Appendix</a>
+        <a href="https://github.com/RuochenLyu/apple-health-analyst" class="topbar__github" aria-label="GitHub" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
       </div>
     </nav>
 
@@ -885,9 +956,9 @@
       <section id="assessment" class="assessment">
         <div class="assessment__main">
           <h1>Health Assessment</h1>
-          <p class="assessment__text">Your current overall status looks strong, with composite readiness rated good: Sleep 90/100, Recovery 93/100, and Activity 50/100. Over the last 30 days you averaged 8.29 hours of sleep, above both the 90-day baseline of 8.07 hours and the trailing 180-day average of 8.13 hours, while deep sleep reached 23.94%, up 4.07 percentage points versus the prior 90 days. There were no nights under 6 hours, so insufficient sleep is not the main constraint right now; sleep is providing a stable recovery base.
+          <p class="assessment__text">Your overall health status is good, with composite scores of Sleep 90/100, Recovery 93/100, and Activity 50/100. Sleep and recovery are clear strengths — your 30-day average sleep of 8.29 hours with 23.94% deep sleep provides an excellent foundation, while your resting heart rate and HRV trends are coherently improving (RHR declining + HRV rising), indicating the autonomic nervous system is in a healthy parasympathetic-dominant state. Body composition remains remarkably stable at 72.63 kg and 16.25% body fat, virtually unchanged from the 180-day averages (72.66 kg / 16.21%), reflecting well-balanced energy intake and expenditure.
 
-The higher-priority opportunities are schedule consistency and activity distribution. Bedtime variability is moderate at 44.19 minutes, but wake-time variability reaches 65.58 minutes, suggesting a weekend-versus-weekday rhythm mismatch. Weekend exercise averages 50 minutes, 3x the weekday average of 16 minutes, while stand time is only 6.65 hours per day. Recovery is not deteriorating overall: the recent 30-day resting heart rate average of 61.13 bpm is slightly above the 90-day baseline of 59.81 bpm, and HRV at 40.01 ms is slightly below the 90-day 40.61 ms and all-time 43.8 ms, yet cross-metric analysis shows declining resting heart rate and rising HRV recently, with adequate next-day recovery after high-strain days. That pattern fits manageable load fluctuation more than sustained overload.</p>
+The primary area for improvement is the activity dimension (50/100). Data reveals a clear &quot;weekend warrior&quot; pattern: weekend exercise averages 50 minutes per day versus just 16 minutes on weekdays — a 3x gap. Research consistently shows that concentrating the same total exercise volume into 1-2 days yields less cardiovascular protection and higher musculoskeletal injury risk compared to even distribution. Additionally, daily standing averages only 6.65 hours, indicating prolonged sedentary periods — even when total exercise meets guidelines, unbroken sitting bouts exceeding 60 minutes are an independent metabolic risk factor. Redistributing exercise across the week and breaking up prolonged sitting represent the highest-return improvements available.</p>
           
         </div>
         <aside class="assessment__aside">
@@ -906,11 +977,11 @@ The higher-priority opportunities are schedule consistency and activity distribu
         <div class="insight-grid">
           <div>
             <h3 class="insight-grid__title">Cross-Metric Findings</h3>
-            <div class="insight-card"><p>Sleep duration + recovery capacity -&gt; Sleep is supporting recovery rather than limiting it: over the last 30 days you averaged 8.29 hours of sleep, 0.22 hours above the prior 90 days, with deep sleep at 23.94% (+4.07 percentage points). With no nights under 6 hours and a recovery score of 93/100, current recovery fluctuations are more likely driven by load distribution than by chronic sleep debt.</p></div><div class="insight-card"><p>Schedule regularity + sleep structure -&gt; The bigger sleep lever is wake-time consistency, not more time in bed: median bedtime and wake time are 23:22 and 07:49, but wake-time standard deviation is 65.58 minutes versus 44.19 minutes for bedtime. Even with strong sleep quantity and deeper sleep, that rhythm variability can make recovery less predictable.</p></div><div class="insight-card"><p>Training load + next-day HRV -&gt; You are tolerating the current workload, but the distribution is inefficient: 12 high-strain days produced next-day HRV of 34.72 ms versus 40.22 ms after rest days, which still counts as adequate recovery. But weekend exercise averages 50 minutes versus 16 on weekdays, leaving the activity score at 50/100 and concentrating injury and recovery stress into fewer days.</p></div><div class="insight-card"><p>Activity volume + body composition -&gt; The current boxing and strength mix is sufficient to maintain body composition: exercise averages 25.13 minutes per day, or about 175.91 minutes per week, while body mass averaged 72.63 kg (-0.29 kg versus the 90-day baseline) and body fat averaged 16.25% (-0.10 percentage points). That argues for redistributing workload before increasing total volume.</p></div>
+            <div class="insight-card"><p>Training load and recovery are well balanced: 12 high-strain days in the past 30 days, with next-day HRV averaging 34.72 ms — only 13.7% below the rest-day average of 40.22 ms — and returning to baseline within 1-2 days. Combined with the aligned dual signal of declining RHR and rising HRV (recovery coherence confirmed), your body is handling the current training load well. You can maintain or moderately progress your training targets.</p></div><div class="insight-card"><p>Sleep duration is well protected, but schedule variability warrants attention: No nights fell below 6 hours recently, which is a key foundation for stable recovery metrics. However, wake time standard deviation reaches 65.58 minutes, crossing the 60-minute &quot;social jet lag&quot; threshold. While bedtime variability (44.19 min) is acceptable, irregular wake times undermine circadian anchoring — the 30-day deep sleep percentage of 23.94% is 4.07 percentage points above the 90-day baseline of 19.87%, and this elevated variability may partly reflect compensatory deep sleep driven by schedule instability.</p></div><div class="insight-card"><p>HRV shows a gradual long-term decline worth monitoring: The 30-day HRV average of 40.01 ms is down 1.70 ms from the 180-day mean of 41.71 ms, and down 3.79 ms from the all-time mean of 43.80 ms. The short-term change versus the 90-day baseline is only -0.60 ms, well within normal fluctuation. However, if this long-term downward trend persists, it could reflect age-related autonomic adaptation or chronic stress accumulation. Continue tracking, and if it's still declining in 3 months, discuss with your doctor.</p></div>
           </div>
           <div>
             <h3 class="insight-grid__title">Behavioural Patterns</h3>
-            <div class="insight-card"><p>Weekend warrior pattern: cross-metric analysis shows weekend exercise averaging 50 minutes, which is 3x the weekday average of 16 minutes. Total volume is adequate, but the tradeoff is that training stress and injury risk get concentrated into a few days. Over the next 2 weeks, it is more useful to add 15-20 minutes of light-to-moderate activity on weekdays than to push weekend sessions even harder.</p></div><div class="insight-card"><p>Wake time is less stable than bedtime: bedtime standard deviation is 44.19 minutes, but wake-time standard deviation reaches 65.58 minutes, with recent late wake days such as 10:01, 10:11, and 10:30. Since sleep duration is already adequate, the better lever is not sleeping longer but pulling weekend wake time closer to your weekday schedule.</p></div><div class="insight-card"><p>Recovery after hard days is generally intact, but stress spikes do appear: after 74 minutes of exercise on 2026-03-21, resting heart rate rose to 78 bpm and SpO2 dropped to 93.5% on 2026-03-22, yet HRV rebounded to 50.6 ms on 2026-03-25, the best day of the month. That pattern suggests you usually recover well, but you respond better to alternating hard days with recovery days than to stacking demanding sessions.</p></div>
+            <div class="insight-card"><p>Weekend warrior pattern: Weekend exercise averages 50 minutes versus 16 minutes on weekdays (3x gap). Your boxing and strength training sessions (4 each per month) are concentrated on fewer days, increasing musculoskeletal injury risk and reducing cardiovascular benefit efficiency. Consider moving 1-2 training sessions to weekdays, or adding 15-20 minutes of brisk walking or stretching on workdays to even out the weekly load.</p></div><div class="insight-card"><p>Sedentary behavior pattern: Daily standing averages only 6.65 hours, with substantial unbroken sitting time. Independent of total exercise volume, every uninterrupted sitting bout exceeding 60 minutes significantly elevates metabolic risk. The stark contrast between your best exercise day (March 7, 82 minutes) and worst (March 6, just 1 minute) highlights an &quot;all-or-nothing&quot; exercise habit that could benefit from more consistent daily movement.</p></div>
           </div>
         </div>
       </section>
@@ -918,11 +989,11 @@ The higher-priority opportunities are schedule consistency and activity distribu
       <!-- Findings & Actions -->
       <section class="overview">
         <h2 class="overview__title">Overview</h2>
-        <p class="overview__text">You do not currently have a sleep quantity problem, and you do not lack the ability to complete training. The main gaps are activity distribution and schedule stability. The most valuable next 2-week move is to keep wake time near the 07:49 anchor, shift part of the weekend workload into weekdays, and raise standing and walking frequency so that sedentary time stops adding extra recovery stress.</p>
+        <p class="overview__text">You have excellent sleep quality and strong recovery capacity — the two hardest pillars of health management to establish. Your biggest opportunity lies in exercise distribution: shifting from &quot;weekend-concentrated bursts&quot; to &quot;maintaining light activity on workdays&quot; while breaking up prolonged sitting every hour. Body composition and recovery indicators are stable and require no major dietary or training intensity changes — the focus should be on optimizing when you move throughout the week.</p>
         <div class="overview__findings">
           <h3>Key Findings</h3>
           <ol>
-            <li>The score profile shows a clear strong-capacity, weak-distribution pattern: Sleep is 90/100 and Recovery is 93/100, but Activity is only 50/100. Combined with weekend exercise of 50 minutes versus 16 minutes on weekdays, the main deficit is consistency rather than session intensity.</li><li>2026-03-22 is the most important day to review this month: resting heart rate reached 78 bpm, the highest recent value, while SpO2 was 93.5% after 74 minutes of exercise the day before. But by 2026-03-25, HRV had climbed to 50.6 ms, the best value of the month, which suggests a recoverable short-term strain peak rather than a persistent decline.</li><li>2026-03-07 is a useful example of high load that still remained manageable: sleep reached 10.18 hours and exercise reached 82 minutes, and across 12 high-strain days the next-day HRV average still held at 34.72 ms, not far from the 40.22 ms seen after rest days. That indicates the current training load is within your recovery capacity.</li><li>The shortest recent sleep night was 6.87 hours on 2026-03-16, still above the 6-hour threshold. Combined with the cross-metric finding that there were no short-sleep nights in the recent window, recovery variability is unlikely to be driven by systematic sleep deprivation.</li>
+            <li>Activity is the clear bottleneck (50/100 vs Sleep 90 + Recovery 93): Weekend exercise is 3x the weekday volume, revealing a typical weekend warrior pattern. March 7 saw 82 minutes of exercise and the longest sleep of the period (10.18 hours), while the preceding day (March 6) logged just 1 minute — exercise habits show a pronounced &quot;pulse&quot; distribution.</li><li>Recovery metrics show coherent bilateral improvement: RHR trending down + HRV trending up, directionally aligned. The latest RHR reading of 56 bpm (March 27) is well below the 30-day average of 61.13 bpm, indicating strong recovery status.</li><li>Wake time variability is elevated (SD 65.58 minutes): Compared to bedtime SD of 44.19 minutes, wake time irregularity is more pronounced. March 16 logged only 6.87 hours (the period's lowest), while March 7 reached 10.18 hours — duration SD is 0.87 hours. Research suggests sleep regularity may impact health more than total duration.</li><li>HRV swings are wide: Best day March 25 reached 50.6 ms, worst day March 1 hit just 16.23 ms (mean 37.78 ms) — a range exceeding 34 ms. On March 22, resting heart rate spiked to 78 bpm (mean 61.13 bpm), possibly reflecting an acute stress event or physical discomfort. Isolated single-day extremes are generally not concerning, but increasing frequency warrants attention.</li>
           </ol>
         </div>
         <div class="pills"><span class="pill pill--info">2 sleep night(s) excluded due to incomplete records.</span><span class="pill pill--info">VO2 Max lacks sufficient recent samples.</span></div>
@@ -1161,7 +1232,7 @@ The higher-priority opportunities are schedule consistency and activity distribu
           <h2 class="module__title">Body Composition Trends</h2>
           <span class="badge badge--ok">Data: Sufficient</span>
         </div>
-        <p class="section-intro" style="padding:16px 24px 0">Recent averages were 72.63 kg for body mass and 16.25% for body fat, down slightly versus the prior 90 days. The body-composition chart supports the view that your current routine is at least sufficient for maintenance.</p>
+        <p class="section-intro" style="padding:16px 24px 0">Weight at 72.63 kg (30-day) vs 72.66 kg (180-day), body fat at 16.25% vs 16.21% — changes are within measurement error. This indicates your current diet and exercise combination maintains a steady energy balance with no adjustment needed.</p>
         <div class="body-grid">
           <div class="body-card">
     <div class="body-card__head">
@@ -1194,13 +1265,13 @@ The higher-priority opportunities are schedule consistency and activity distribu
         <div class="actions__card">
           <h3>Recommendations for the Next 2 Weeks</h3>
           <ol>
-            <li>Hold wake time between 07:30 and 08:00 for at least 10 of the next 14 days. If you go to bed late, still wake near target and shift bedtime earlier by 15-20 minutes the following night rather than sleeping far later on weekends.</li><li>Add 15-20 minutes of brisk walking, easy cycling, or light strength work on 3-4 weekdays each week. The goal is to keep weekend exercise below 40% of total weekly exercise time.</li><li>Raise stand time from 6.65 hours toward at least 8 hours per day by standing or walking for 2 minutes every hour for the next 14 days.</li><li>Whenever boxing or strength training lasts more than 60 minutes, schedule 20-30 minutes of low-intensity recovery activity the next day and capture a morning resting heart rate or HRV reading within 30 minutes of waking at least 3 times per week.</li>
+            <li>Add light activity on workdays: Schedule 15-20 minutes of brisk walking or stretching each workday (during lunch break or after work). Target: raise weekday exercise from 16 to 30+ minutes, narrowing the gap with weekends.</li><li>Stand up every hour: Set a 60-minute standing reminder and move for 1-2 minutes each time. Target: increase daily standing hours from 6.65 to 8+.</li><li>Fix your wake time: For the next two weeks, aim to wake up at 07:45 (±15 minutes), including weekends. This is more effective than fixing bedtime — morning light exposure directly regulates melatonin secretion, and bedtime will naturally stabilize.</li><li>Restore VO2 Max tracking: Your last VO2 Max reading was February 20 (46.32 mL/min/kg) — over 5 weeks ago with no new data. Complete at least one outdoor brisk walk or run of 20+ minutes while wearing your Apple Watch to trigger an automatic VO2 Max estimate.</li>
           </ol>
         </div>
         <div class="actions__card actions__card--warn">
           <h3>When to Seek Medical Attention</h3>
           <ul>
-            <li>If you again see a pattern like 2026-03-22 and resting heart rate stays about 10 bpm above your recent 30-day average for 3 days in a row, or if it comes with chest discomfort, unusual shortness of breath, or marked fatigue, consider medical evaluation.</li><li>If future SpO2 readings repeatedly fall around 93-94% or lower, especially with snoring, morning headaches, daytime sleepiness, or reduced exercise tolerance, discuss it with a clinician rather than relying on a single wearable reading.</li><li>If respiratory rate repeatedly remains near 9 breaths per minute in future measurements, or you develop dizziness or breathing discomfort, seek follow-up rather than assuming the device is correct.</li>
+            <li>If resting heart rate stays above 75 bpm for more than a week (it reached 78 bpm on March 22), consider consulting a doctor to rule out infection, thyroid changes, or other factors.</li><li>If HRV continues declining for 3+ months without lifestyle changes (currently trending from 43.80 to 40.01 ms over the long term), discuss an autonomic function evaluation with your physician.</li><li>If respiratory rate consistently reads below 12 breaths/min after confirming proper device placement, consult a healthcare provider.</li>
           </ul>
         </div>
       </div>
@@ -1210,7 +1281,7 @@ The higher-priority opportunities are schedule consistency and activity distribu
         <div class="actions__card">
           <h3>Questions for Your Next Doctor Visit</h3>
           <ol>
-            <li>My recent 30-day resting heart rate averaged 61.13 bpm versus 59.81 bpm over the prior 90 days, while HRV averaged 40.01 ms versus 43.8 ms all-time. Does this pattern still look compatible with normal training load, or is there any reason to screen for excess recovery stress?</li><li>On 2026-03-22 my resting heart rate reached 78 bpm and SpO2 was 93.5%, but HRV later rebounded to 50.6 ms on 2026-03-25. If I see this short-term stress-then-recovery pattern again, would you want a baseline ECG, cardiopulmonary evaluation, or sleep-related assessment?</li><li>I only had 1 respiratory-rate sample in the last 30 days, and it was 9 breaths per minute, versus a 90-day average of 19.69. Is that more likely to be device artifact, or should I validate it with more reliable overnight respiratory monitoring if it repeats?</li>
+            <li>&quot;My HRV has gradually declined from an all-time average of 43.80 ms to 40.01 ms over the past 30 days. Is this rate of decline worth an autonomic nervous system assessment?&quot;</li><li>&quot;My resting heart rate is typically 56-63 bpm, but it spiked to 78 bpm on March 22. If these single-day spikes become more frequent, should I get an ECG?&quot;</li><li>&quot;I primarily do boxing and strength training (4 sessions each per month) with a VO2 Max around 46 mL/min/kg. Given my age and exercise pattern, would a different training mix better improve my cardiovascular fitness?&quot;</li>
           </ol>
         </div>
       </div>
@@ -1222,7 +1293,7 @@ The higher-priority opportunities are schedule consistency and activity distribu
           <div>
             <h3>Data Limitations</h3>
             <ul class="appendix__list">
-              <li>Two sleep nights were excluded because records were incomplete, including 2026-03-24 with only 1.65 recorded sleep hours, so that date should not be interpreted as a true full-night sleep result.</li><li>Respiratory rate has only 1 recent sample, so the 9 breaths-per-minute value is a clue to verify, not a standalone conclusion.</li><li>VO2 max has no usable samples in the last 30 days, so recent aerobic fitness cannot be judged as improving, stable, or declining.</li><li>Recovery metrics come from the watch-based primary source with medium source confidence, which makes them useful for trend interpretation but not for over-interpreting single-point fluctuations.</li>
+              <li>Respiratory rate has only 1 valid sample in the past 30 days (9 breaths/min), making trend analysis impossible. This value is far below normal range and is very likely a device measurement artifact.</li><li>VO2 Max has no samples in the past 30 days; the most recent reading is from February 20 (46.32 mL/min/kg). Recent cardiorespiratory fitness changes cannot be assessed.</li><li>Sleep data covers 264 days (from Withings) while recovery metrics span 760-784 days (from Apple Watch). The different time ranges limit cross-metric correlation analysis to overlapping windows.</li><li>2 sleep nights were excluded due to incomplete records (2023-08-05 recorded 0 hours, 2026-03-24 recorded 1.65 hours). This does not affect overall trend accuracy.</li>
             </ul>
           </div>
           <div>
@@ -1256,9 +1327,19 @@ The higher-priority opportunities are schedule consistency and activity distribu
             </ul>
           </div>
         </div>
-        <div class="disclaimer">This report is based only on structured data from the Apple Health export and is intended as health management guidance, not a medical diagnosis, disease assessment, or treatment recommendation. If unusual values persist or you develop clear symptoms, consult a clinician.</div>
-        <div class="disclaimer footer-link">Generated by <a href="https://github.com/RuochenLyu/apple-health-analyst">apple-health-analyst</a></div>
+        <div class="disclaimer">This report is generated from Apple Health export data and is intended for health management reference only. It does not constitute a medical diagnosis or treatment recommendation. Consumer-grade wearable devices have limited measurement accuracy and data may contain errors. Please consult a qualified healthcare professional if you have health concerns.</div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <a href="https://github.com/RuochenLyu/apple-health-analyst" class="site-footer__brand" target="_blank" rel="noopener">apple-health-analyst</a>
+      <div class="site-footer__tagline">Privacy-first Apple Health analytics</div>
+      <div class="site-footer__links">
+        <a href="https://github.com/RuochenLyu/apple-health-analyst" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </footer>
   </body>
 </html>

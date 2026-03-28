@@ -1,6 +1,6 @@
 {
   "name": "apple-health-analyst",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Privacy-first Apple Health export analyzer. Parses HealthKit data locally, generates cross-metric insights, and renders professional health reports (HTML/Markdown) with bilingual support. Designed as an agent skill for Codex and Claude Code.",
   "type": "module",
   "bin": {
@@ -15,22 +15,28 @@
   "keywords": [
     "apple-health",
     "healthkit",
+    "health-report",
+    "quantified-self",
+    "apple-watch",
     "cli",
     "codex-skill",
-    "agent-skills"
+    "agent-skills",
+    "claude-code-skill",
+    "skill"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RuochenLyu/apple-health-analyst.git"
   },
-  "homepage": "https://github.com/RuochenLyu/apple-health-analyst",
+  "homepage": "https://ruochenlyu.github.io/apple-health-analyst/",
   "bugs": {
     "url": "https://github.com/RuochenLyu/apple-health-analyst/issues"
   },
   "files": [
     "dist",
     "README.md",
+    "README.zh-CN.md",
     ".agents/skills/apple-health-analyst",
     "LICENSE"
   ],

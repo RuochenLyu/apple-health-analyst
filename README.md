@@ -1,5 +1,9 @@
 # apple-health-analyst
 
+[![npm version](https://img.shields.io/npm/v/apple-health-analyst)](https://www.npmjs.com/package/apple-health-analyst)
+[![npm downloads](https://img.shields.io/npm/dm/apple-health-analyst)](https://www.npmjs.com/package/apple-health-analyst)
+[![license](https://img.shields.io/npm/l/apple-health-analyst)](https://github.com/RuochenLyu/apple-health-analyst/blob/main/LICENSE)
+
 [中文文档](https://github.com/RuochenLyu/apple-health-analyst/blob/main/README.zh-CN.md)
 
 Analyze Apple Health export data locally, generating health reports with cross-metric correlation analysis, behavioral pattern recognition, and composite scoring.
@@ -7,6 +11,8 @@ Analyze Apple Health export data locally, generating health reports with cross-m
 Not a data dashboard — you can already see the data on your phone. This tool's value is **interpreting your data like a health advisor**: How are sleep and recovery linked? How does schedule regularity affect HRV? Does training load match recovery capacity?
 
 **[View Sample Report (English)](https://ruochenlyu.github.io/apple-health-analyst/)** | **[中文示例报告](https://ruochenlyu.github.io/apple-health-analyst/zh.html)**
+
+![Sample Report](https://raw.githubusercontent.com/RuochenLyu/apple-health-analyst/main/docs/screenshot-en.png)
 
 ## Features
 

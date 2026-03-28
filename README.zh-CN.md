@@ -1,10 +1,16 @@
 # apple-health-analyst
 
+[![npm version](https://img.shields.io/npm/v/apple-health-analyst)](https://www.npmjs.com/package/apple-health-analyst)
+[![npm downloads](https://img.shields.io/npm/dm/apple-health-analyst)](https://www.npmjs.com/package/apple-health-analyst)
+[![license](https://img.shields.io/npm/l/apple-health-analyst)](https://github.com/RuochenLyu/apple-health-analyst/blob/main/LICENSE)
+
 本地分析 Apple Health 导出数据，生成带有跨指标关联分析、行为模式识别和综合评分的健康报告。
 
 不是数据仪表盘——手机就能看数据。这个工具的价值是**像健康顾问一样解读你的数据**：睡眠和恢复之间有什么关联？作息规律性如何影响 HRV？训练负荷和恢复能力是否匹配？
 
 **[查看中文示例报告](https://ruochenlyu.github.io/apple-health-analyst/zh.html)** | **[English Sample Report](https://ruochenlyu.github.io/apple-health-analyst/)**
+
+![示例报告](https://raw.githubusercontent.com/RuochenLyu/apple-health-analyst/main/docs/screenshot-zh.png)
 
 ## 特性
 

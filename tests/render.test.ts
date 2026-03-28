@@ -64,9 +64,12 @@ describe("render pipeline", () => {
     const narrativeJson = JSON.parse(await readFile(path.join(outDir, "report.llm.json"), "utf8"));
 
     expect(html).toContain("<svg");
-    // Only external link should be the GitHub project link in footer
+    // External links should only be project-owned (GitHub repo, npm package)
     const httpsMatches = html.match(/https:\/\//g) ?? [];
-    expect(httpsMatches.length).toBeLessThanOrEqual(1);
+    expect(httpsMatches.every((_, i) => {
+      const urlMatch = html.match(/https:\/\/[^\s"<]*/g) ?? [];
+      return urlMatch.every(u => u.includes("github.com/RuochenLyu") || u.includes("npmjs.com/package/apple-health"));
+    })).toBe(true);
     expect(html).toContain('id="sleep"');
     expect(html).toContain('id="recovery"');
     expect(html).toContain("关键发现");
