@@ -31,6 +31,8 @@ Not a data dashboard — you can already see the data on your phone. This tool's
 4. Wait for the export to finish (may take a few minutes for large datasets), then choose **Save to Files** or AirDrop to your computer
 5. The resulting `Export.zip` is the input file for this tool
 
+Official exports may contain multiple XML files. The main analysis input is the XML whose root element is `HealthData`; `export_cda.xml` / `ClinicalDocument` is auxiliary only. The main XML filename is not fixed, may be localized (for example `导出.xml`), and some ZIP tools may display that filename as mojibake.
+
 ## Quick Start
 
 Install the skill with one command (works with Claude Code, Codex, Cursor, and [40+ agents](https://skills.sh)):

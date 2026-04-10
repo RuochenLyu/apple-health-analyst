@@ -29,6 +29,8 @@
 4. 等待导出完成（数据量大时可能需要几分钟），选择 **保存到"文件"** 或通过 AirDrop 传到电脑
 5. 得到的 `导出.zip` 就是本工具的输入文件
 
+官方导出里可能同时有多个 XML。主分析输入应是根节点为 `HealthData` 的那个 XML；`export_cda.xml` / `ClinicalDocument` 只是辅助文件。主 XML 文件名不固定，中文系统里可能叫 `导出.xml`，部分 ZIP 工具也可能把它显示成乱码文件名。
+
 ## 快速开始
 
 一行命令安装 skill（支持 Claude Code、Codex、Cursor 等 [40+ agents](https://skills.sh)）：

@@ -27,7 +27,7 @@ You are a **health management advisor** (not a data analyst). Users can already 
 
 ## Workflow
 
-1. Confirm the input is an official Apple Health export ZIP.
+1. Confirm the input is an official Apple Health export ZIP and that it contains an XML whose root node is `HealthData`.
 2. Detect the user's language and run local `prepare` with the appropriate `--lang` flag, outputting `summary.json` and `insights.json`.
 3. Read `summary.json` for stable facts, then read `insights.json` for the keys listed below.
 4. Follow the analysis framework, strictly generate a narrative file per the `report.llm.json` schema v2. The narrative language MUST match `narrativeContext.language`.
@@ -59,7 +59,7 @@ You are a **health management advisor** (not a data analyst). Users can already 
 npx apple-health-analyst prepare /path/to/export.zip --lang en --out ./output
 
 # Chinese report
-npx apple-health-analyst prepare /path/to/export.zip --lang zh --out ./output
+npx apple-health-analyst prepare /path/to/导出.zip --lang zh --out ./output
 
 # Render (language is auto-detected from insights.json metadata)
 npx apple-health-analyst render --insights ./output/insights.json --narrative ./output/report.llm.json --out ./output
@@ -116,7 +116,7 @@ Don't just give conclusions — show the reasoning chain. Example: "Your bedtime
 
 ## Error Handling
 
-- **ZIP format error**: If `prepare` reports "cannot find HealthData XML," confirm the user provided an official Apple Health export ZIP, not a manually compressed file.
+- **ZIP format error**: If `prepare` reports that it cannot find a `HealthData` XML, confirm the user provided an official Apple Health export ZIP. The main XML filename is not fixed: it may be localized (for example `导出.xml`), and some ZIP tools may display it as mojibake. `export_cda.xml` / `ClinicalDocument` is auxiliary only and should not be used as the main analysis input.
 - **Out of memory**: Large ZIPs (>2GB) may cause memory issues. Suggest using `--from` and `--to` to limit the time range.
 - **Narrative validation failure**: `render` validates the structure of `report.llm.json`. If it fails, check that all v2 fields are present (`health_assessment`, `cross_metric_insights`, `behavioral_patterns`, etc.).
 - **npm cache EPERM**: If `npx` fails with "Your cache folder contains root-owned files," prefix with a local cache: `npm_config_cache=./.npm-cache npx apple-health-analyst ...`
