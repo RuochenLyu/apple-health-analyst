@@ -45,12 +45,33 @@ function termHint(tip: string): string {
   return `<span class="term-hint" tabindex="0" role="note" data-tip="${escapeHtml(tip)}" aria-label="${escapeHtml(tip)}">?</span>`;
 }
 
+function displayNumber(value: number, t: TrainingRenderT): string {
+  return value.toLocaleString(t.locale, { maximumFractionDigits: 1 });
+}
+
 function fmt(value: number | null, suffix: string, t: TrainingRenderT): string {
-  return value === null ? t.insufficientData : `${value}${suffix}`;
+  return value === null ? t.insufficientData : `${displayNumber(value, t)}${suffix}`;
 }
 
 function fmtCount(value: number, t: TrainingRenderT): string {
   return value.toLocaleString(t.locale);
+}
+
+function labeled(label: string, value: string, t: TrainingRenderT): string {
+  return t.htmlLang === "zh-CN" ? `${label}：${value}` : `${label}: ${value}`;
+}
+
+function parenthetical(value: string, t: TrainingRenderT): string {
+  return t.htmlLang === "zh-CN" ? `（${value}）` : `(${value})`;
+}
+
+function renderParagraphs(value: string, className: string): string {
+  return value
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p class="${className}">${escapeHtml(paragraph)}</p>`)
+    .join("");
 }
 
 function stateLabel(state: TrainingState, t: TrainingRenderT): string {
@@ -102,8 +123,12 @@ function tagLabel(tag: TrainingSportInsight["statusTags"][number], t: TrainingRe
       return t.tagLoadFalling;
     case "recovery supported":
       return t.tagRecoverySupported;
-    case "recovery unsupported":
-      return t.tagRecoveryUnsupported;
+    case "recovery mixed":
+      return t.tagRecoveryMixed;
+    case "recovery concern":
+      return t.tagRecoveryConcern;
+    case "recovery unknown":
+      return t.tagRecoveryUnknown;
     case "consistency good":
       return t.tagConsistencyGood;
     default:
@@ -117,8 +142,12 @@ function tagBadgeClass(tag: TrainingSportInsight["statusTags"][number]): string 
     case "recovery supported":
     case "consistency good":
       return "badge--ok";
-    case "recovery unsupported":
+    case "recovery concern":
       return "badge--low";
+    case "recovery mixed":
+      return "badge--warn";
+    case "recovery unknown":
+      return "badge--info";
     case "load rising":
     case "load falling":
     case "consistency uneven":
@@ -148,19 +177,14 @@ function fmtSignedPct(value: number | null, insufficient: string): string {
     return insufficient;
   }
   const sign = value > 0 ? "+" : "";
-  return `${sign}${value}%`;
+  return `${sign}${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
 }
 
-/** Format a signed TSB value for display, including the qualitative label. */
+/** Format TSB as a relative comparison, without importing absolute thresholds. */
 function tsbDisplay(tsb: number, t: TrainingRenderT): { value: string; label: string } {
   const sign = tsb > 0 ? "+" : "";
   const value = `${sign}${tsb}`;
-  let label: string;
-  if (tsb <= -30) label = t.tsbStrained;
-  else if (tsb <= -10) label = t.tsbBuilding;
-  else if (tsb <= 5) label = t.tsbNeutral;
-  else if (tsb <= 25) label = t.tsbFresh;
-  else label = t.tsbVeryFresh;
+  const label = tsb < 0 ? t.tsbBuilding : tsb > 0 ? t.tsbFresh : t.tsbNeutral;
   return { value, label };
 }
 
@@ -174,7 +198,7 @@ function renderCtlHeroStat(load: TrainingLoadStatus | null, t: TrainingRenderT):
   const deltaText = fmtSignedPct(load.ctlDelta30dPct, t.insufficientData);
   return `<div class="assessment-hero__stat">
     <span class="assessment-hero__stat-label">${escapeHtml(t.cardCtl)}${termHint(t.hintCtl)}</span>
-    <span class="assessment-hero__stat-value">${escapeHtml(`${load.ctl} ${t.cardCtlUnit}`)}</span>
+    <span class="assessment-hero__stat-value">${escapeHtml(`${displayNumber(load.ctl, t)} ${t.cardCtlUnit}`)}</span>
     <span class="assessment-hero__stat-label">${escapeHtml(`${t.ctlDelta30dLabel}: ${deltaText}`)}</span>
   </div>`;
 }
@@ -242,18 +266,18 @@ function renderLoadHeatmap(
   // Draw day cells.
   const cells: string[] = [];
   const monthLabels: string[] = [];
+  const displayedLoads: Array<{ date: string; load: number }> = [];
   let lastMonthLabelCol = -3;
   for (let col = 0; col < weeks; col += 1) {
     const colStartMs = startCol.getTime() + col * 7 * 86400000;
     for (let row = 0; row < 7; row += 1) {
-      // Row 0 = Sunday; shift to Monday-first display: row 0 = Mon, ..., row 6 = Sun.
-      // Our columns start on Sunday -> map (row) to the corresponding weekday.
-      // Simpler: keep Sunday-first layout but label Mon/Wed/Fri rows.
+      // `startCol` is a Monday, so rows run Monday through Sunday.
       const dayMs = colStartMs + row * 86400000;
       const day = new Date(dayMs);
       if (day > endDate) continue; // Future days: skip
       const iso = day.toISOString().slice(0, 10);
       const load = loadByDate.get(iso) ?? 0;
+      displayedLoads.push({ date: iso, load });
       const bucket = pickBucket(load);
       const x = rowLabelWidth + col * (cell + gap);
       const y = monthLabelHeight + row * (cell + gap);
@@ -299,27 +323,36 @@ function renderLoadHeatmap(
       ];
       const label = t.locale.startsWith("zh") ? monthAbbrZh[monthIdx] : monthAbbrEn[monthIdx];
       monthLabels.push(
-        `<text x="${rowLabelWidth + col * (cell + gap)}" y="${monthLabelHeight - 4}" font-size="10" fill="#64748B">${escapeHtml(label)}</text>`,
+        `<text x="${rowLabelWidth + col * (cell + gap)}" y="${monthLabelHeight - 4}" font-size="12" fill="#64748B">${escapeHtml(label)}</text>`,
       );
       lastMonthLabelCol = col;
     }
   }
 
-  // Day-of-week labels (Mon, Wed, Fri rows — odd rows).
+  // Day-of-week labels for the Monday-first rows.
   const weekdayLabels = [
-    { row: 1, text: t.heatmapWeekdayLabelMon },
-    { row: 3, text: t.heatmapWeekdayLabelWed },
-    { row: 5, text: t.heatmapWeekdayLabelFri },
+    { row: 0, text: t.heatmapWeekdayLabelMon },
+    { row: 2, text: t.heatmapWeekdayLabelWed },
+    { row: 4, text: t.heatmapWeekdayLabelFri },
   ]
     .map(
       ({ row, text }) =>
-        `<text x="0" y="${monthLabelHeight + row * (cell + gap) + cell - 2}" font-size="10" fill="#64748B">${escapeHtml(text)}</text>`,
+        `<text x="0" y="${monthLabelHeight + row * (cell + gap) + cell - 2}" font-size="12" fill="#64748B">${escapeHtml(text)}</text>`,
     )
     .join("");
 
   const legendSwatches = HEATMAP_PALETTE.map(
     (color) => `<span class="heatmap-legend__swatch" style="background:${color}"></span>`,
   ).join("");
+  const activeLoads = displayedLoads.filter((entry) => entry.load > 0);
+  const heatmapSummary = t.heatmapAriaSummary(
+    displayedLoads.length,
+    activeLoads.length,
+    displayedLoads[0]?.date ?? effectiveEnd,
+    displayedLoads.at(-1)?.date ?? effectiveEnd,
+    Math.round(activeLoads.reduce((sum, entry) => sum + entry.load, 0)),
+    Math.round(activeLoads.length > 0 ? Math.max(...activeLoads.map((entry) => entry.load)) : 0),
+  );
 
   return `<div class="module-card heatmap-card">
     <div class="heatmap-card__header">
@@ -327,7 +360,8 @@ function renderLoadHeatmap(
       <p>${escapeHtml(t.heatmapSubtitle)}</p>
     </div>
     <div class="heatmap-wrap">
-      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(t.heatmapTitle)}" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" tabindex="0" aria-label="${escapeHtml(t.heatmapTitle)}" xmlns="http://www.w3.org/2000/svg">
+        <desc>${escapeHtml(heatmapSummary)}</desc>
         ${monthLabels.join("")}
         ${weekdayLabels}
         ${cells.join("")}
@@ -364,15 +398,15 @@ function renderGlossaryCard(t: TrainingRenderT): string {
 
 function renderTrainingLoadSummary(load: TrainingLoadStatus | null, t: TrainingRenderT): string {
   if (!load) {
-    return `<li>${escapeHtml(`${t.cardCtl}：${t.insufficientData}`)}</li>`;
+    return `<li>${escapeHtml(labeled(t.cardCtl, t.insufficientData, t))}</li>`;
   }
   const tsb = tsbDisplay(load.tsb, t);
   const parts: string[] = [
-    `<li>${escapeHtml(`${t.cardCtl}：${load.ctl} ${t.cardCtlUnit}`)}</li>`,
-    `<li>${escapeHtml(`${t.ctlDelta30dLabel}：${fmtSignedPct(load.ctlDelta30dPct, t.insufficientData)}`)}</li>`,
-    `<li>${escapeHtml(`${t.ctlDelta90dLabel}：${fmtSignedPct(load.ctlDelta90dPct, t.insufficientData)}`)}</li>`,
-    `<li>${escapeHtml(`${t.cardTsb}：${tsb.value} · ${tsb.label}`)}</li>`,
-    `<li>${escapeHtml(`${t.cardAtl}：${load.atl} ${t.cardCtlUnit}`)}</li>`,
+    `<li>${escapeHtml(labeled(t.cardCtl, `${displayNumber(load.ctl, t)} ${t.cardCtlUnit}`, t))}</li>`,
+    `<li>${escapeHtml(labeled(t.ctlDelta30dLabel, fmtSignedPct(load.ctlDelta30dPct, t.insufficientData), t))}</li>`,
+    `<li>${escapeHtml(labeled(t.ctlDelta90dLabel, fmtSignedPct(load.ctlDelta90dPct, t.insufficientData), t))}</li>`,
+    `<li>${escapeHtml(labeled(t.cardTsb, `${load.tsb > 0 ? "+" : ""}${displayNumber(load.tsb, t)} · ${tsb.label}`, t))}</li>`,
+    `<li>${escapeHtml(labeled(t.cardAtl, `${displayNumber(load.atl, t)} ${t.cardCtlUnit}`, t))}</li>`,
   ];
   if (load.warmupDays < 42) {
     parts.push(`<li>${escapeHtml(t.ctlWarmupNote(load.warmupDays))}</li>`);
@@ -388,17 +422,11 @@ function renderTsbHeroStat(load: TrainingLoadStatus | null, t: TrainingRenderT):
     </div>`;
   }
   const display = tsbDisplay(load.tsb, t);
-  const semanticClass =
-    load.tsb <= -30
-      ? "assessment-hero__readiness-low"
-      : load.tsb <= -10
-        ? "assessment-hero__readiness-moderate"
-        : load.tsb > 5
-          ? "assessment-hero__readiness-good"
-          : "";
   return `<div class="assessment-hero__stat">
     <span class="assessment-hero__stat-label">${escapeHtml(t.cardTsb)}${termHint(t.hintTsb)}</span>
-    <span class="assessment-hero__stat-value ${semanticClass}">${escapeHtml(display.value)}</span>
+    <span class="assessment-hero__stat-value">${escapeHtml(
+      `${load.tsb > 0 ? "+" : ""}${displayNumber(load.tsb, t)}`,
+    )}</span>
     <span class="assessment-hero__stat-label">${escapeHtml(display.label)}</span>
   </div>`;
 }
@@ -431,7 +459,7 @@ function trainingWindowStart(insights: InsightBundle, t: TrainingRenderT): strin
 }
 
 function chartColors(count: number): string[] {
-  return ["#F97316", "#EF4444", "#0EA5E9", "#22C55E", "#6366F1"].slice(0, Math.max(count, 1));
+  return ["#9A3412", "#B91C1C", "#0369A1", "#15803D", "#4338CA"].slice(0, Math.max(count, 1));
 }
 
 function renderLegend(items: Array<{ label: string; color: string }>): string {
@@ -444,7 +472,7 @@ function renderLegend(items: Array<{ label: string; color: string }>): string {
 }
 
 function renderMetricCard(label: string, value: string, accent: string, sub?: string): string {
-  return `<div class="metric-card" style="border-top:3px solid ${accent}">
+  return `<div class="metric-card" style="--metric-accent:${accent}">
     <div class="metric-card__label">${escapeHtml(label)}</div>
     <div class="metric-card__value">${escapeHtml(value)}</div>
     ${sub ? `<div class="metric-card__sub">${escapeHtml(sub)}</div>` : ""}
@@ -572,7 +600,7 @@ function buildSportMetricCards(sport: TrainingSportInsight, t: TrainingRenderT):
   const cards: MetricCard[] = [
     {
       label: windowLabel(focusWindow, t),
-      value: `${fmtCount(focusSummary.workouts, t)} ${t.workoutsLabel}`,
+      value: t.workoutCountValue(fmtCount(focusSummary.workouts, t)),
       sub: fmt(focusSummary.totalDurationMinutes, t.unitMinutes, t),
     },
     {
@@ -603,7 +631,7 @@ function buildSportMetricCards(sport: TrainingSportInsight, t: TrainingRenderT):
   cards.push({
     label: t.activeMonthsLast12Label,
     value: fmtCount(sport.consistency.activeMonthsLast12, t),
-    sub: `${t.longestGapLabel}：${fmt(sport.consistency.longestGapDays, t.unitDays, t)}`,
+    sub: labeled(t.longestGapLabel, fmt(sport.consistency.longestGapDays, t.unitDays, t), t),
   });
 
   return cards.slice(0, 4);
@@ -622,10 +650,10 @@ function renderChartGroup(chart: ChartGroup, narrative: TrainingNarrativeReport,
     chart.series[2].visual === "area";
 
   if (isPmc) {
-    const ctlColor = "#F97316"; // fitness
-    const atlColor = "#0EA5E9"; // fatigue
-    const tsbPositive = "#22C55E"; // fresh
-    const tsbNegative = "#EF4444"; // strained
+    const ctlColor = "#C35B12";
+    const atlColor = "#176B87";
+    const tsbPositive = "#18764A";
+    const tsbNegative = "#C93636";
     return `<div class="module-card">
       <div class="module-card__header">
         <div>
@@ -664,8 +692,8 @@ function renderChartGroup(chart: ChartGroup, narrative: TrainingNarrativeReport,
     chart.series[1].visual === "line";
 
   if (isDualAxis) {
-    const barColor = "#F97316";
-    const lineColor = "#EF4444";
+    const barColor = "#9A3412";
+    const lineColor = "#B91C1C";
     return `<div class="module-card">
       <div class="module-card__header">
         <div>
@@ -689,7 +717,7 @@ function renderChartGroup(chart: ChartGroup, narrative: TrainingNarrativeReport,
         <p>${escapeHtml(chartCallout(narrative, chart.id, chart.subtitle || t.chartCalloutFallback))}</p>
       </div>
     </div>
-    ${renderLegend(chart.series.map((series, index) => ({ label: series.label, color: colors[index] ?? "#F97316" })))}
+    ${renderLegend(chart.series.map((series, index) => ({ label: series.label, color: colors[index] ?? "#9A3412" })))}
     <div class="chart-wrap">${renderMultiSeriesLineChart(chart.series, colors, { width: 700, height: 220 }, t)}</div>
   </div>`;
 }
@@ -701,7 +729,11 @@ function renderWindowLine(
 ): string {
   const summary = getSportWindow(sport, windowId);
   return `<li>${escapeHtml(
-    `${windowLabel(windowId, t)}：${summary.workouts} ${t.workoutsLabel} / ${fmt(summary.totalDurationMinutes, t.unitMinutes, t)}`,
+    labeled(
+      windowLabel(windowId, t),
+      `${t.workoutCountValue(fmtCount(summary.workouts, t))} / ${fmt(summary.totalDurationMinutes, t.unitMinutes, t)}`,
+      t,
+    ),
   )}</li>`;
 }
 
@@ -736,19 +768,41 @@ function renderSportSection(
 ): string {
   const sectionNarrative = narrative.sport_sections.find((entry) => entry.sport_id === sport.id);
   const chart = charts.find((item) => item.id === `sport_${sport.id}_trend`);
-  const accent = "#F97316";
+  const accent = "#9A3412";
   const metricCards = buildSportMetricCards(sport, t);
   const loadWindows = sportLoadWindowIds(sport);
   const indexLabel = String(index).padStart(2, "0");
-
-  return `<section id="${escapeHtml(sport.id)}" class="module module--activity sport-module">
-    <div class="module__header module__header--sport">
+  const isDormant = sport.recent30d.workouts === 0;
+  const assessment = sectionNarrative?.assessment ?? t.chartCalloutFallback;
+  const signals = sectionNarrative?.key_signals ?? [];
+  const recommendations = sectionNarrative?.recommendations ?? [];
+  const narrativeCards = [
+    signals.length > 0
+      ? `<div class="module-card">
+          <h3>${escapeHtml(t.sportSignalsTitle)}</h3>
+          <ul class="plain-list">
+            ${signals.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+          </ul>
+        </div>`
+      : "",
+    recommendations.length > 0
+      ? `<div class="module-card">
+          <h3>${escapeHtml(t.sportRecommendationsTitle)}</h3>
+          <ul class="plain-list">
+            ${recommendations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+          </ul>
+        </div>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
+  const header = `
       <div class="module__title-wrap">
         <span class="module__index">${escapeHtml(indexLabel)}</span>
         <span class="module__icon module__icon--emoji">${renderTrainingIcon(sport.icon)}</span>
         <div>
           <h2>${escapeHtml(sport.label)}</h2>
-          <p>${escapeHtml(sectionNarrative?.assessment ?? t.chartCalloutFallback)}</p>
+          <p>${escapeHtml(isDormant ? t.dormantSportHint : assessment)}</p>
         </div>
       </div>
       <div class="pills">${sport.statusTags
@@ -756,9 +810,9 @@ function renderSportSection(
           (tag) =>
             `<span class="badge ${tagBadgeClass(tag)}">${escapeHtml(tagLabel(tag, t))}</span>`,
         )
-        .join("")}</div>
-    </div>
-    <div class="module__body">
+        .join("")}</div>`;
+  const body = `
+      ${isDormant ? `<p class="sport-disclosure__assessment">${escapeHtml(assessment)}</p>` : ""}
       <div class="summary-cards summary-cards--sport">
         ${metricCards
           .map((card) => renderMetricCard(card.label, card.value, accent, card.sub))
@@ -769,35 +823,34 @@ function renderSportSection(
           <h3>${escapeHtml(t.loadTrendTitle)}</h3>
           <ul class="plain-list">
             ${loadWindows.map((windowId) => renderWindowLine(sport, windowId, t)).join("")}
-            <li>${escapeHtml(`${t.consistencyTrendLabel}：${trendLabel(sport.consistency.frequencyTrend, t)}`)}</li>
+            <li>${escapeHtml(labeled(t.consistencyTrendLabel, trendLabel(sport.consistency.frequencyTrend, t), t))}</li>
           </ul>
         </div>
         <div class="module-card">
           <h3>${escapeHtml(t.recoverySupportTitle)}</h3>
           <ul class="plain-list">
-            <li>${escapeHtml(`${t.recoverySampleCountLabel}：${sport.recoveryAfterWorkout.sampleCount}`)}</li>
-            <li>${escapeHtml(`${t.nextDaySleepDeltaLabel}：${fmt(sport.recoveryAfterWorkout.nextDaySleepHoursDelta, t.unitHours, t)}`)}</li>
-            <li>${escapeHtml(`${t.nextDayHrvDeltaLabel}：${fmt(sport.recoveryAfterWorkout.nextDayHrvDelta, "", t)}`)}</li>
-            <li>${escapeHtml(`${t.nextDayRestingHrDeltaLabel}：${fmt(sport.recoveryAfterWorkout.nextDayRestingHeartRateDelta, t.unitBpm, t)}`)}</li>
+            <li>${escapeHtml(labeled(t.recoverySampleCountLabel, `${sport.recoveryAfterWorkout.sampleCount}`, t))}</li>
+            <li>${escapeHtml(labeled(t.recoveryComparisonLabel, t.recoveryComparisonValue, t))}</li>
+            <li>${escapeHtml(labeled(`${t.nextDaySleepDeltaLabel} ${parenthetical(t.comparisonSampleCountNote(sport.recoveryAfterWorkout.sleepSampleCount, sport.recoveryAfterWorkout.sleepComparatorSampleCount), t)}`, fmt(sport.recoveryAfterWorkout.nextDaySleepHoursDelta, t.unitHours, t), t))}</li>
+            <li>${escapeHtml(labeled(`${t.nextDayHrvDeltaLabel} ${parenthetical(t.comparisonSampleCountNote(sport.recoveryAfterWorkout.hrvSampleCount, sport.recoveryAfterWorkout.hrvComparatorSampleCount), t)}`, fmt(sport.recoveryAfterWorkout.nextDayHrvDelta, t.unitMilliseconds, t), t))}</li>
+            <li>${escapeHtml(labeled(`${t.nextDayRestingHrDeltaLabel} ${parenthetical(t.comparisonSampleCountNote(sport.recoveryAfterWorkout.restingHeartRateSampleCount, sport.recoveryAfterWorkout.restingHeartRateComparatorSampleCount), t)}`, fmt(sport.recoveryAfterWorkout.nextDayRestingHeartRateDelta, t.unitBpm, t), t))}</li>
           </ul>
         </div>
       </div>
       ${chart ? renderChartGroup(chart, narrative, t) : ""}
-      <div class="module-card-grid">
-        <div class="module-card">
-          <h3>${escapeHtml(t.sportSignalsTitle)}</h3>
-          <ul class="plain-list">
-            ${(sectionNarrative?.key_signals ?? []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-          </ul>
-        </div>
-        <div class="module-card">
-          <h3>${escapeHtml(t.sportRecommendationsTitle)}</h3>
-          <ul class="plain-list">
-            ${(sectionNarrative?.recommendations ?? []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-          </ul>
-        </div>
-      </div>
-    </div>
+      ${narrativeCards ? `<div class="module-card-grid">${narrativeCards}</div>` : ""}
+  `;
+
+  if (isDormant) {
+    return `<details id="${escapeHtml(sport.id)}" class="module module--activity sport-module sport-disclosure">
+      <summary class="module__header module__header--sport sport-disclosure__summary">${header}</summary>
+      <div class="module__body">${body}</div>
+    </details>`;
+  }
+
+  return `<section id="${escapeHtml(sport.id)}" class="module module--activity sport-module">
+    <div class="module__header module__header--sport">${header}</div>
+    <div class="module__body">${body}</div>
   </section>`;
 }
 
@@ -807,8 +860,13 @@ export interface RenderTrainingReportHtmlOptions {
    * health report. The skill only sets this when the health report is being
    * rendered into the same output directory — skipping it prevents a dead
    * `./report.html` link on single-report runs.
-   */
+  */
   includeCrossLink?: boolean;
+  /**
+   * Optional notice shown near the start of the report. Public demos use it
+   * to make the synthetic-data boundary explicit.
+   */
+  sampleNotice?: string;
 }
 
 export function renderTrainingReportHtml(
@@ -818,17 +876,41 @@ export function renderTrainingReportHtml(
   options: RenderTrainingReportHtmlOptions = {},
 ): string {
   const includeCrossLink = options.includeCrossLink === true;
+  const sampleNotice = options.sampleNotice?.trim();
   const training = insights.training;
   const loadChart = training.charts.find((chart) => chart.id === "training_load");
   const recoveryChart = training.charts.find((chart) => chart.id === "training_recovery");
   const windowStart = trainingWindowStart(insights, t);
   const windowEnd = insights.coverage.windowEnd.slice(0, 10);
+  const hasWatchouts = narrative.watchouts.length > 0;
+  const actionBrief = `<section id="actions" class="action-brief">
+    <div class="action-brief__heading">
+      <span class="action-brief__eyebrow">${escapeHtml(t.navActions)}</span>
+      <h2>${escapeHtml(t.actionsTitle)}</h2>
+    </div>
+    <div class="actions${hasWatchouts ? "" : " actions--single"}">
+      <div class="actions__card">
+        <h3>${escapeHtml(t.actionsPriorityTitle)}</h3>
+        <ul class="plain-list">${narrative.actions_next_2_weeks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </div>
+      ${hasWatchouts ? `<div class="actions__card actions__card--warn">
+        <h3>${escapeHtml(t.watchoutsTitle)}</h3>
+        <ul class="plain-list">${narrative.watchouts.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </div>` : ""}
+    </div>
+    ${narrative.questions_for_doctor.length > 0 ? `<div class="actions actions--single">
+      <div class="actions__card actions__card--quiet">
+        <h3>${escapeHtml(t.doctorQuestionsTitle)}</h3>
+        <ul class="plain-list">${narrative.questions_for_doctor.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </div>
+    </div>` : ""}
+  </section>`;
 
   return `<!doctype html>
 <html lang="${escapeHtml(t.htmlLang)}">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>${escapeHtml(t.reportTitle)}</title>
     <meta property="og:title" content="${escapeHtml(t.reportTitle)}" />
     <meta property="og:description" content="${escapeHtml(t.footerTagline)}" />
@@ -841,10 +923,11 @@ ${TRAINING_CSS}
     </style>
   </head>
   <body>
+    <a class="skip-link" href="#report-content">${escapeHtml(t.skipToContent)}</a>
     <div class="topbar">
       <div class="topbar__title">${escapeHtml(t.reportTitle)}</div>
       <span class="topbar__date">${escapeHtml(windowStart)} ~ ${escapeHtml(windowEnd)}</span>
-      <nav class="topbar__nav">
+      <nav class="topbar__nav" aria-label="${escapeHtml(t.reportSectionsLabel)}">
         <a href="#assessment">${escapeHtml(t.navAssessment)}</a>
         <a href="#load-recovery">${escapeHtml(t.navLoadRecovery)}</a>
         <a href="#sports">${escapeHtml(t.navSports)}</a>
@@ -859,11 +942,16 @@ ${TRAINING_CSS}
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       </a>
     </div>
-    <main>
+    <main id="report-content">
+      <header class="print-header">
+        <h1>${escapeHtml(t.reportTitle)}</h1>
+        <p>${escapeHtml(windowStart)} ~ ${escapeHtml(windowEnd)}</p>
+      </header>
+      ${sampleNotice ? `<aside class="sample-notice" role="note">${escapeHtml(sampleNotice)}</aside>` : ""}
       <section id="assessment" class="assessment-hero">
         <div class="assessment-hero__main">
           <h1>${escapeHtml(t.assessmentTitle)}</h1>
-          <p class="assessment-hero__text">${escapeHtml(narrative.training_assessment)}</p>
+          ${renderParagraphs(narrative.training_assessment, "assessment-hero__text")}
         </div>
         <aside class="assessment-hero__aside">
           <div class="assessment-hero__stat">
@@ -882,6 +970,8 @@ ${TRAINING_CSS}
           </div>
         </aside>
       </section>
+
+      ${actionBrief}
 
       <section id="findings" class="overview">
         <h2 class="overview__title">${escapeHtml(t.overallFindingsTitle)}</h2>
@@ -910,17 +1000,17 @@ ${TRAINING_CSS}
               <h3>${escapeHtml(t.loadTrendTitle)}</h3>
               <ul class="plain-list">
                 ${renderTrainingLoadSummary(training.summary.trainingLoad, t)}
-                <li>${escapeHtml(`${t.workoutsLabel} ${t.vsBaseline}：${fmt(training.summary.loadTrend.recentVsBaseline90d.workoutsPer30d, "", t)}`)}</li>
-                <li>${escapeHtml(`${t.durationLabel} ${t.vsBaseline}：${fmt(training.summary.loadTrend.recentVsBaseline90d.durationMinutesPer30d, t.unitMinutes, t)}`)}</li>
-                <li>${escapeHtml(`${t.varietyLabel}：${training.summary.loadTrend.recentWorkoutVariety}（${t.vsBaseline} ${training.summary.loadTrend.recentVsBaselineVariety > 0 ? "+" : ""}${training.summary.loadTrend.recentVsBaselineVariety}）`)}</li>
+                <li>${escapeHtml(labeled(`${t.workoutsLabel} ${t.vsBaseline}`, fmt(training.summary.loadTrend.recentVsBaseline90d.workoutsPer30d, "", t), t))}</li>
+                <li>${escapeHtml(labeled(`${t.durationLabel} ${t.vsBaseline}`, fmt(training.summary.loadTrend.recentVsBaseline90d.durationMinutesPer30d, t.unitMinutes, t), t))}</li>
+                <li>${escapeHtml(labeled(t.varietyLabel, `${training.summary.loadTrend.recentWorkoutVariety} ${parenthetical(`${t.vsBaseline} ${training.summary.loadTrend.recentVsBaselineVariety > 0 ? "+" : ""}${training.summary.loadTrend.recentVsBaselineVariety}`, t)}`, t))}</li>
               </ul>
             </div>
             <div class="module-card">
               <h3>${escapeHtml(t.recoverySupportTitle)}</h3>
               <ul class="plain-list">
-                <li>${escapeHtml(`${t.sleepVsBaselineLabel}：${fmt(training.summary.recoverySupport.sleepDeltaHours, t.unitHours, t)}`)}</li>
-                <li>${escapeHtml(`${t.hrvVsBaselineLabel}：${fmt(training.summary.recoverySupport.hrvDeltaPct, "%", t)}`)}</li>
-                <li>${escapeHtml(`${t.restingHeartRateVsBaselineLabel}：${fmt(training.summary.recoverySupport.restingHeartRateDeltaBpm, t.unitBpm, t)}`)}</li>
+                <li>${escapeHtml(labeled(t.sleepVsBaselineLabel, fmt(training.summary.recoverySupport.sleepDeltaHours, t.unitHours, t), t))}</li>
+                <li>${escapeHtml(labeled(t.hrvVsBaselineLabel, fmt(training.summary.recoverySupport.hrvDeltaPct, "%", t), t))}</li>
+                <li>${escapeHtml(labeled(t.restingHeartRateVsBaselineLabel, fmt(training.summary.recoverySupport.restingHeartRateDeltaBpm, t.unitBpm, t), t))}</li>
               </ul>
             </div>
           </div>
@@ -939,36 +1029,6 @@ ${TRAINING_CSS}
               )
               .join("")
           : `<div class="overview"><p class="overview__text">${escapeHtml(t.noSportData)}</p></div>`}
-      </section>
-
-      <section id="actions" class="module">
-        <div class="module__header">
-          <div>
-            <h2>${escapeHtml(t.actionsTitle)}</h2>
-          </div>
-        </div>
-        <div class="module__body">
-          <div class="module-card-grid">
-            <div class="module-card">
-              <h3>${escapeHtml(t.watchoutsTitle)}</h3>
-              <ul class="plain-list">${narrative.watchouts.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-            </div>
-            <div class="module-card">
-              <h3>${escapeHtml(t.actionsTitle)}</h3>
-              <ul class="plain-list">${narrative.actions_next_2_weeks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-            </div>
-          </div>
-          <div class="module-card-grid">
-            <div class="module-card">
-              <h3>${escapeHtml(t.doctorQuestionsTitle)}</h3>
-              <ul class="plain-list">${narrative.questions_for_doctor.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-            </div>
-            <div class="module-card">
-              <h3>${escapeHtml(t.chartSectionTitle)}</h3>
-              <ul class="plain-list">${training.charts.map((chart) => `<li>${escapeHtml(`${chart.title}：${chartCallout(narrative, chart.id, t.chartCalloutFallback)}`)}</li>`).join("")}</ul>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section id="appendix" class="module">
@@ -994,6 +1054,7 @@ ${TRAINING_CSS}
     <footer class="site-footer">
       <a href="https://github.com/RuochenLyu/apple-health-analyst" class="site-footer__brand" target="_blank" rel="noopener">apple-health-analyst</a>
       <div class="site-footer__tagline">${escapeHtml(t.footerTagline)}</div>
+      <div class="site-footer__tagline">${escapeHtml(t.projectBoundary)}</div>
       <div class="site-footer__links">
         ${includeCrossLink ? `<a href="./report.html">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5l-7 7 7 7M19 12H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

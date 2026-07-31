@@ -200,8 +200,8 @@ function compareWorkoutGroupsByDuration(
 }
 
 function monthKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 }
 
@@ -282,7 +282,7 @@ export function summarizeWorkoutWindow(workouts: WorkoutSample[]): WorkoutTypeWi
 function summarizeYearly(workouts: WorkoutSample[]): WorkoutTypeYearlySummary[] {
   const buckets = new Map<number, WorkoutSample[]>();
   for (const workout of workouts) {
-    const year = workout.startDate.getFullYear();
+    const year = workout.startDate.getUTCFullYear();
     buckets.set(year, [...(buckets.get(year) ?? []), workout]);
   }
 
@@ -308,7 +308,13 @@ function summarizeRecentMonths(workouts: WorkoutSample[], effectiveEnd: Date): W
   }
 
   for (let offset = 11; offset >= 0; offset -= 1) {
-    const monthDate = new Date(effectiveEnd.getFullYear(), effectiveEnd.getMonth() - offset, 1);
+    const monthDate = new Date(
+      Date.UTC(
+        effectiveEnd.getUTCFullYear(),
+        effectiveEnd.getUTCMonth() - offset,
+        1,
+      ),
+    );
     const key = monthKey(monthDate);
     const summary = summarizeWorkoutWindow(monthBuckets.get(key) ?? []);
     months.push({

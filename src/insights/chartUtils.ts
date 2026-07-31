@@ -1,10 +1,8 @@
-import {
-  RECENT_DAYS,
-  type ChartGranularity,
-  type ChartPoint,
-} from "../types.js";
+import type { ChartGranularity, ChartPoint } from "../types.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DAILY_SPAN_DAYS = 90;
+const WEEKLY_SPAN_DAYS = 2 * 365;
 
 type AggregateMode = "average" | "sum" | "latest";
 
@@ -14,15 +12,25 @@ interface TimedValue {
 }
 
 function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 function endOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
 }
 
 function startOfWeek(date: Date): Date {
-  const day = date.getDay();
+  const day = date.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
   return startOfDay(new Date(date.getTime() + diff * DAY_MS));
 }
@@ -32,11 +40,13 @@ function endOfWeek(date: Date): Date {
 }
 
 function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
 
 function endOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999),
+  );
 }
 
 function round(value: number | null): number | null {
@@ -46,38 +56,56 @@ function round(value: number | null): number | null {
   return Math.round(value * 100) / 100;
 }
 
-function daysAgo(anchor: Date, date: Date): number {
-  return Math.floor((anchor.getTime() - date.getTime()) / DAY_MS);
-}
-
-export function selectGranularity(date: Date, anchorEnd: Date): ChartGranularity {
-  const age = daysAgo(anchorEnd, date);
-  if (age <= RECENT_DAYS) {
+export function selectGranularity(
+  earliestDate: Date,
+  anchorEnd: Date,
+): ChartGranularity {
+  const spanDays =
+    Math.max(
+      0,
+      Math.floor(
+        (startOfDay(anchorEnd).getTime() - startOfDay(earliestDate).getTime()) /
+          DAY_MS,
+      ),
+    ) + 1;
+  if (spanDays <= DAILY_SPAN_DAYS) {
     return "day";
   }
-  if (age <= 180) {
+  if (spanDays <= WEEKLY_SPAN_DAYS) {
     return "week";
   }
   return "month";
 }
 
-function bucketWindow(date: Date, granularity: ChartGranularity): { start: Date; end: Date } {
+function bucketWindow(
+  date: Date,
+  granularity: ChartGranularity,
+  anchorEnd: Date,
+): { start: Date; end: Date } {
+  let start: Date;
+  let end: Date;
+
   if (granularity === "day") {
-    const start = startOfDay(date);
-    return { start, end: endOfDay(start) };
+    start = startOfDay(date);
+    end = endOfDay(start);
+  } else if (granularity === "week") {
+    start = startOfWeek(date);
+    end = endOfWeek(date);
+  } else {
+    start = startOfMonth(date);
+    end = endOfMonth(date);
   }
-  if (granularity === "week") {
-    const start = startOfWeek(date);
-    return { start, end: endOfWeek(date) };
+
+  if (end > anchorEnd) {
+    end = anchorEnd;
   }
-  const start = startOfMonth(date);
-  return { start, end: endOfMonth(date) };
+  return { start, end };
 }
 
 function formatDatePart(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -88,7 +116,7 @@ function labelForBucket(start: Date, end: Date, granularity: ChartGranularity): 
   if (granularity === "week") {
     return `${formatDatePart(start)} ~ ${formatDatePart(end)}`;
   }
-  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
+  return `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 export function compressTimeSeries(
@@ -107,9 +135,19 @@ export function compressTimeSeries(
     }
   >();
 
+  const earliestTimestamp = values.reduce<Date | null>(
+    (earliest, entry) =>
+      earliest === null || entry.timestamp < earliest
+        ? entry.timestamp
+        : earliest,
+    null,
+  );
+  const granularity = earliestTimestamp
+    ? selectGranularity(earliestTimestamp, anchorEnd)
+    : "day";
+
   for (const entry of values) {
-    const granularity = selectGranularity(entry.timestamp, anchorEnd);
-    const { start, end } = bucketWindow(entry.timestamp, granularity);
+    const { start, end } = bucketWindow(entry.timestamp, granularity, anchorEnd);
     const key = `${granularity}:${start.toISOString()}`;
     const bucket =
       buckets.get(key) ??

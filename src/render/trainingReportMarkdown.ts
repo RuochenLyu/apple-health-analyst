@@ -18,8 +18,20 @@ const DISTANCE_WORKOUT_TYPES = new Set([
   "HKWorkoutActivityTypeHiking",
 ]);
 
-function fmt(value: number | null, suffix: string, insufficient: string): string {
-  return value === null ? insufficient : `${value}${suffix}`;
+function displayNumber(value: number, t: TrainingRenderT): string {
+  return value.toLocaleString(t.locale, { maximumFractionDigits: 1 });
+}
+
+function fmt(value: number | null, suffix: string, t: TrainingRenderT): string {
+  return value === null ? t.insufficientData : `${displayNumber(value, t)}${suffix}`;
+}
+
+function labeled(label: string, value: string, t: TrainingRenderT): string {
+  return t.htmlLang === "zh-CN" ? `${label}：${value}` : `${label}: ${value}`;
+}
+
+function parenthetical(value: string, t: TrainingRenderT): string {
+  return t.htmlLang === "zh-CN" ? `（${value}）` : `(${value})`;
 }
 
 function section(title: string, values: string[]): string {
@@ -27,7 +39,9 @@ function section(title: string, values: string[]): string {
 }
 
 function subsection(title: string, values: string[]): string[] {
-  return [`#### ${title}`, ...values.map((value) => `- ${value}`)];
+  return values.length > 0
+    ? [`#### ${title}`, ...values.map((value) => `- ${value}`)]
+    : [];
 }
 
 function stateLabel(state: TrainingState, t: TrainingRenderT): string {
@@ -80,7 +94,9 @@ function tagLabel(
   if (value === "load stable") return t.tagLoadStable;
   if (value === "load falling") return t.tagLoadFalling;
   if (value === "recovery supported") return t.tagRecoverySupported;
-  if (value === "recovery unsupported") return t.tagRecoveryUnsupported;
+  if (value === "recovery mixed") return t.tagRecoveryMixed;
+  if (value === "recovery concern") return t.tagRecoveryConcern;
+  if (value === "recovery unknown") return t.tagRecoveryUnknown;
   if (value === "consistency good") return t.tagConsistencyGood;
   return t.tagConsistencyUneven;
 }
@@ -153,36 +169,34 @@ function sportSupportsDistance(sport: TrainingSportInsight): boolean {
 }
 
 function metricLine(label: string, value: number | null, suffix: string, windowId: SportWindowId, t: TrainingRenderT): string {
-  return `- ${label}：${fmt(value, suffix, t.insufficientData)}（${windowLabel(windowId, t)}）`;
+  return `- ${labeled(label, `${fmt(value, suffix, t)} ${parenthetical(windowLabel(windowId, t), t)}`, t)}`;
 }
 
-function fmtSignedPct(value: number | null, insufficient: string): string {
+function fmtSignedPct(value: number | null, t: TrainingRenderT): string {
   if (value === null) {
-    return insufficient;
+    return t.insufficientData;
   }
   const sign = value > 0 ? "+" : "";
-  return `${sign}${value}%`;
+  return `${sign}${displayNumber(value, t)}%`;
 }
 
 function tsbLabel(tsb: number, t: TrainingRenderT): string {
-  if (tsb <= -30) return t.tsbStrained;
-  if (tsb <= -10) return t.tsbBuilding;
-  if (tsb <= 5) return t.tsbNeutral;
-  if (tsb <= 25) return t.tsbFresh;
-  return t.tsbVeryFresh;
+  if (tsb < 0) return t.tsbBuilding;
+  if (tsb > 0) return t.tsbFresh;
+  return t.tsbNeutral;
 }
 
 function renderTrainingLoadMarkdownLines(load: TrainingLoadStatus | null, t: TrainingRenderT): string[] {
   if (!load) {
-    return [`- ${t.cardCtl}：${t.insufficientData}`];
+    return [`- ${labeled(t.cardCtl, t.insufficientData, t)}`];
   }
   const tsbSign = load.tsb > 0 ? "+" : "";
   const lines = [
-    `- ${t.cardCtl}：${load.ctl} ${t.cardCtlUnit}`,
-    `- ${t.ctlDelta30dLabel}：${fmtSignedPct(load.ctlDelta30dPct, t.insufficientData)}`,
-    `- ${t.ctlDelta90dLabel}：${fmtSignedPct(load.ctlDelta90dPct, t.insufficientData)}`,
-    `- ${t.cardTsb}：${tsbSign}${load.tsb} · ${tsbLabel(load.tsb, t)}`,
-    `- ${t.cardAtl}：${load.atl} ${t.cardCtlUnit}`,
+    `- ${labeled(t.cardCtl, `${displayNumber(load.ctl, t)} ${t.cardCtlUnit}`, t)}`,
+    `- ${labeled(t.ctlDelta30dLabel, fmtSignedPct(load.ctlDelta30dPct, t), t)}`,
+    `- ${labeled(t.ctlDelta90dLabel, fmtSignedPct(load.ctlDelta90dPct, t), t)}`,
+    `- ${labeled(t.cardTsb, `${tsbSign}${displayNumber(load.tsb, t)} · ${tsbLabel(load.tsb, t)}`, t)}`,
+    `- ${labeled(t.cardAtl, `${displayNumber(load.atl, t)} ${t.cardCtlUnit}`, t)}`,
   ];
   if (load.warmupDays < 42) {
     lines.push(`- ${t.ctlWarmupNote(load.warmupDays)}`);
@@ -224,26 +238,30 @@ export function renderTrainingReportMarkdown(
     `## ${t.assessmentTitle}`,
     narrative.training_assessment,
     "",
-    `- ${t.cardTrainingState}：${stateLabel(insights.training.summary.trainingState, t)}`,
-    `- ${t.cardReadiness}：${readinessLabel(insights.training.summary.readiness, t)}`,
-    `- ${t.cardRecentLoad}：${t.cardRecentLoadSub(
-      insights.training.summary.recent30dWorkouts,
-      fmt(insights.training.summary.recent30dDurationMinutes, t.unitMinutes, t.insufficientData),
+    `- ${labeled(t.cardTrainingState, stateLabel(insights.training.summary.trainingState, t), t)}`,
+    `- ${labeled(t.cardReadiness, readinessLabel(insights.training.summary.readiness, t), t)}`,
+    `- ${labeled(
+      t.cardRecentLoad,
+      t.cardRecentLoadSub(
+        insights.training.summary.recent30dWorkouts,
+        fmt(insights.training.summary.recent30dDurationMinutes, t.unitMinutes, t),
+      ),
+      t,
     )}`,
-    `- ${t.cardPrimarySport}：${insights.training.summary.primarySportLabel ?? t.insufficientData}`,
+    `- ${labeled(t.cardPrimarySport, insights.training.summary.primarySportLabel ?? t.insufficientData, t)}`,
     "",
     section(t.overallFindingsTitle, narrative.overall_findings),
     "",
     `## ${t.loadRecoveryTitle}`,
     ...renderTrainingLoadMarkdownLines(insights.training.summary.trainingLoad, t),
-    `- ${t.workoutsLabel} ${t.vsBaseline}：${fmt(insights.training.summary.loadTrend.recentVsBaseline90d.workoutsPer30d, "", t.insufficientData)}`,
-    `- ${t.durationLabel} ${t.vsBaseline}：${fmt(insights.training.summary.loadTrend.recentVsBaseline90d.durationMinutesPer30d, t.unitMinutes, t.insufficientData)}`,
-    `- ${t.activeEnergyLabel} ${t.vsBaseline}：${fmt(insights.training.summary.loadTrend.recentVsBaseline90d.activeEnergyBurnedKcalPer30d, t.unitKcal, t.insufficientData)}`,
-    `- ${t.varietyLabel}：${insights.training.summary.loadTrend.recentWorkoutVariety}（${t.vsBaseline} ${insights.training.summary.loadTrend.recentVsBaselineVariety > 0 ? "+" : ""}${insights.training.summary.loadTrend.recentVsBaselineVariety}）`,
-    `- ${t.recoverySupportTitle}：${insights.training.summary.recoverySupport.adequate === true ? t.supportAdequate : insights.training.summary.recoverySupport.adequate === false ? t.supportInadequate : t.supportUnknown}`,
-    `- ${t.sleepVsBaselineLabel}：${fmt(insights.training.summary.recoverySupport.sleepDeltaHours, t.unitHours, t.insufficientData)}`,
-    `- ${t.hrvVsBaselineLabel}：${fmt(insights.training.summary.recoverySupport.hrvDeltaPct, "%", t.insufficientData)}`,
-    `- ${t.restingHeartRateVsBaselineLabel}：${fmt(insights.training.summary.recoverySupport.restingHeartRateDeltaBpm, t.unitBpm, t.insufficientData)}`,
+    `- ${labeled(`${t.workoutsLabel} ${t.vsBaseline}`, fmt(insights.training.summary.loadTrend.recentVsBaseline90d.workoutsPer30d, "", t), t)}`,
+    `- ${labeled(`${t.durationLabel} ${t.vsBaseline}`, fmt(insights.training.summary.loadTrend.recentVsBaseline90d.durationMinutesPer30d, t.unitMinutes, t), t)}`,
+    `- ${labeled(`${t.activeEnergyLabel} ${t.vsBaseline}`, fmt(insights.training.summary.loadTrend.recentVsBaseline90d.activeEnergyBurnedKcalPer30d, t.unitKcal, t), t)}`,
+    `- ${labeled(t.varietyLabel, `${insights.training.summary.loadTrend.recentWorkoutVariety} ${parenthetical(`${t.vsBaseline} ${insights.training.summary.loadTrend.recentVsBaselineVariety > 0 ? "+" : ""}${insights.training.summary.loadTrend.recentVsBaselineVariety}`, t)}`, t)}`,
+    `- ${labeled(t.recoverySupportTitle, insights.training.summary.recoverySupport.adequate === true ? t.supportAdequate : insights.training.summary.recoverySupport.adequate === false ? t.supportInadequate : t.supportUnknown, t)}`,
+    `- ${labeled(t.sleepVsBaselineLabel, fmt(insights.training.summary.recoverySupport.sleepDeltaHours, t.unitHours, t), t)}`,
+    `- ${labeled(t.hrvVsBaselineLabel, fmt(insights.training.summary.recoverySupport.hrvDeltaPct, "%", t), t)}`,
+    `- ${labeled(t.restingHeartRateVsBaselineLabel, fmt(insights.training.summary.recoverySupport.restingHeartRateDeltaBpm, t.unitBpm, t), t)}`,
     "",
     `## ${t.sportsTitle}`,
   ];
@@ -284,12 +302,12 @@ export function renderTrainingReportMarkdown(
       );
 
       lines.push(`### ${sport.label}`);
-      lines.push(`- ${t.focusWindowLabel}：${windowLabel(focusWindow, t)}`);
+      lines.push(`- ${labeled(t.focusWindowLabel, windowLabel(focusWindow, t), t)}`);
       for (const windowId of loadWindows) {
         const summary = getSportWindow(sport, windowId);
-        lines.push(`- ${windowLabel(windowId, t)}：${summary.workouts} / ${fmt(summary.totalDurationMinutes, t.unitMinutes, t.insufficientData)}`);
+        lines.push(`- ${labeled(windowLabel(windowId, t), `${summary.workouts} / ${fmt(summary.totalDurationMinutes, t.unitMinutes, t)}`, t)}`);
       }
-      lines.push(`- ${t.activeEnergyLabel}：${fmt(focusSummary.totalActiveEnergyBurnedKcal, t.unitKcal, t.insufficientData)}（${windowLabel(focusWindow, t)}）`);
+      lines.push(`- ${labeled(t.activeEnergyLabel, `${fmt(focusSummary.totalActiveEnergyBurnedKcal, t.unitKcal, t)} ${parenthetical(windowLabel(focusWindow, t), t)}`, t)}`);
       if (heartRateMetric) {
         lines.push(metricLine(t.avgHeartRateLabel, heartRateMetric.summary.averageHeartRateBpm, t.unitBpm, heartRateMetric.windowId, t));
       }
@@ -300,15 +318,16 @@ export function renderTrainingReportMarkdown(
         lines.push(metricLine(t.avgMetsLabel, metsMetric.summary.averageMETs, "", metsMetric.windowId, t));
       }
       if (sport.recoveryAfterWorkout.sampleCount > 0) {
-        lines.push(`- ${t.recoverySampleCountLabel}：${fmt(sport.recoveryAfterWorkout.sampleCount, "", t.insufficientData)}`);
-        lines.push(`- ${t.nextDaySleepDeltaLabel}：${fmt(sport.recoveryAfterWorkout.nextDaySleepHoursDelta, t.unitHours, t.insufficientData)}`);
-        lines.push(`- ${t.nextDayHrvDeltaLabel}：${fmt(sport.recoveryAfterWorkout.nextDayHrvDelta, "", t.insufficientData)}`);
-        lines.push(`- ${t.nextDayRestingHrDeltaLabel}：${fmt(sport.recoveryAfterWorkout.nextDayRestingHeartRateDelta, t.unitBpm, t.insufficientData)}`);
+        lines.push(`- ${labeled(t.recoverySampleCountLabel, fmt(sport.recoveryAfterWorkout.sampleCount, "", t), t)}`);
+        lines.push(`- ${labeled(t.recoveryComparisonLabel, t.recoveryComparisonValue, t)}`);
+        lines.push(`- ${labeled(`${t.nextDaySleepDeltaLabel} ${parenthetical(t.comparisonSampleCountNote(sport.recoveryAfterWorkout.sleepSampleCount, sport.recoveryAfterWorkout.sleepComparatorSampleCount), t)}`, fmt(sport.recoveryAfterWorkout.nextDaySleepHoursDelta, t.unitHours, t), t)}`);
+        lines.push(`- ${labeled(`${t.nextDayHrvDeltaLabel} ${parenthetical(t.comparisonSampleCountNote(sport.recoveryAfterWorkout.hrvSampleCount, sport.recoveryAfterWorkout.hrvComparatorSampleCount), t)}`, fmt(sport.recoveryAfterWorkout.nextDayHrvDelta, t.unitMilliseconds, t), t)}`);
+        lines.push(`- ${labeled(`${t.nextDayRestingHrDeltaLabel} ${parenthetical(t.comparisonSampleCountNote(sport.recoveryAfterWorkout.restingHeartRateSampleCount, sport.recoveryAfterWorkout.restingHeartRateComparatorSampleCount), t)}`, fmt(sport.recoveryAfterWorkout.nextDayRestingHeartRateDelta, t.unitBpm, t), t)}`);
       }
-      lines.push(`- ${t.longestGapLabel}：${fmt(sport.consistency.longestGapDays, t.unitDays, t.insufficientData)}`);
-      lines.push(`- ${t.activeMonthsLast12Label}：${fmt(sport.consistency.activeMonthsLast12, "", t.insufficientData)}`);
-      lines.push(`- ${t.statusTagsLabel}：${sport.statusTags.map((tag) => tagLabel(tag, t)).join(" | ")}`);
-      lines.push(`- ${t.consistencyTrendLabel}：${trendLabel(sport.consistency.frequencyTrend, t)}`);
+      lines.push(`- ${labeled(t.longestGapLabel, fmt(sport.consistency.longestGapDays, t.unitDays, t), t)}`);
+      lines.push(`- ${labeled(t.activeMonthsLast12Label, fmt(sport.consistency.activeMonthsLast12, "", t), t)}`);
+      lines.push(`- ${labeled(t.statusTagsLabel, sport.statusTags.map((tag) => tagLabel(tag, t)).join(" | "), t)}`);
+      lines.push(`- ${labeled(t.consistencyTrendLabel, trendLabel(sport.consistency.frequencyTrend, t), t)}`);
       if (sectionNarrative) {
         lines.push(sectionNarrative.assessment);
         lines.push(...subsection(sectionNarrative.title, sectionNarrative.key_signals));
@@ -326,7 +345,7 @@ export function renderTrainingReportMarkdown(
   lines.push("");
   lines.push(`## ${t.chartSectionTitle}`);
   lines.push(
-    ...insights.training.charts.map((chart) => `- ${chart.title}：${callouts.get(chart.id)?.summary ?? t.chartCalloutFallback}`),
+    ...insights.training.charts.map((chart) => `- ${labeled(chart.title, callouts.get(chart.id)?.summary ?? t.chartCalloutFallback, t)}`),
   );
   lines.push("");
   lines.push(section(t.appendixTitle, narrative.data_limitations));

@@ -1,0 +1,80 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish npm package and GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.15.0
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install current npm
+        run: npm install --global npm@12.0.2
+
+      - name: Verify release provenance
+        run: |
+          test "v$(node --print 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify deterministic demos
+        run: npm run demo:check && npm run docs:check
+
+      - name: Check npm release state
+        id: npm-release
+        run: |
+          package_name=$(node --print 'require("./package.json").name')
+          package_version=$(node --print 'require("./package.json").version')
+          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish package
+        if: steps.npm-release.outputs.published != 'true'
+        run: npm publish --access public
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            package_version=$(node --print 'require("./package.json").version')
+            awk -v header="## [${package_version}] - " '
+              index($0, header) == 1 { printing = 1; next }
+              printing && /^## \[/ { exit }
+              printing { print }
+            ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+            test -s "$RUNNER_TEMP/release-notes.md"
+            gh release create "$GITHUB_REF_NAME" \
+              --verify-tag \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi

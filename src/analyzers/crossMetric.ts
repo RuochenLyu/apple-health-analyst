@@ -1,5 +1,4 @@
 import type {
-  ActivitySummarySample,
   ParsedHealthExport,
   PrimarySources,
   QuantitySample,
@@ -32,6 +31,8 @@ export interface DailyMetricRow {
 
 export interface SleepRecoveryLink {
   shortSleepDays: number;
+  shortSleepPairedHrvDays: number;
+  normalSleepPairedHrvDays: number;
   shortSleepNextDayHRV: number | null;
   normalSleepNextDayHRV: number | null;
   hrvDropOnPoorSleep: number | null;
@@ -51,6 +52,8 @@ export interface SleepConsistency {
 
 export interface ActivityRecoveryBalance {
   highStrainDays: number;
+  highStrainPairedHrvDays: number;
+  restDayPairedHrvDays: number;
   highStrainNextDayHRV: number | null;
   restDayNextDayHRV: number | null;
   recoveryAdequate: boolean | null;
@@ -94,6 +97,8 @@ export interface CrossMetricAnalysis {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+const MIN_ASSOCIATION_SAMPLES_PER_GROUP = 3;
+
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -132,15 +137,6 @@ function avgSamples(samples: QuantitySample[]): number | null {
   return sum / samples.length;
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function linearScore(value: number, low: number, high: number): number {
-  if (high === low) return 50;
-  return clamp(((value - low) / (high - low)) * 100, 0, 100);
-}
-
 function dayOfWeek(dateStr: string): number {
   return new Date(`${dateStr}T12:00:00Z`).getUTCDay(); // 0=Sun, 6=Sat
 }
@@ -148,6 +144,16 @@ function dayOfWeek(dateStr: string): number {
 function isWeekend(dateStr: string): boolean {
   const dow = dayOfWeek(dateStr);
   return dow === 0 || dow === 6;
+}
+
+/**
+ * Apple Exercise Time commonly overlaps with logged workout duration. Use the
+ * larger signal instead of summing both and counting one session twice.
+ */
+function effectiveExerciseMinutes(row: DailyMetricRow): number | null {
+  if (row.exerciseMinutes === null) return row.workoutMinutes;
+  if (row.workoutMinutes === null) return row.exerciseMinutes;
+  return Math.max(row.exerciseMinutes, row.workoutMinutes);
 }
 
 // ── Build daily metric rows ────────────────────────────────────────
@@ -159,7 +165,12 @@ function buildDailyRows(
 ): DailyMetricRow[] {
   const sleepSource = primarySources.sleep?.canonicalName ?? null;
   const sleepRecords = sleepSource
-    ? parsed.records.sleep.filter((r) => r.canonicalSource === sleepSource)
+    ? parsed.records.sleep.filter(
+        (r) =>
+          r.canonicalSource === sleepSource &&
+          (!window.effectiveStart || r.startDate >= window.effectiveStart) &&
+          r.startDate <= window.effectiveEnd,
+      )
     : [];
   const nights = buildNightSummaries(sleepRecords, window.effectiveEnd)
     .filter((n) => n.totalSleepHours >= 3);
@@ -173,7 +184,12 @@ function buildDailyRows(
   ): Map<string, QuantitySample[]> {
     const source = (sources as Record<string, { canonicalName: string } | null>)[key];
     if (!source) return new Map();
-    const samples = parsed.records[metric].filter((r) => r.canonicalSource === source.canonicalName);
+    const samples = parsed.records[metric].filter(
+      (r) =>
+        r.canonicalSource === source.canonicalName &&
+        (!window.effectiveStart || r.startDate >= window.effectiveStart) &&
+        r.startDate <= window.effectiveEnd,
+    );
     return groupByDate(samples, (s) => s.startDate);
   }
 
@@ -209,9 +225,10 @@ function buildDailyRows(
   for (const key of workoutsByDay.keys()) allDates.add(key);
 
   const recentStart = isoDate(window.recentStart);
+  const effectiveEnd = isoDate(window.effectiveEnd);
 
   const rows: DailyMetricRow[] = [...allDates]
-    .filter((d) => d >= recentStart)
+    .filter((d) => d >= recentStart && d <= effectiveEnd)
     .sort()
     .map((date) => {
       const night = nightMap.get(date);
@@ -225,10 +242,10 @@ function buildDailyRows(
           ? roundNumber((night.remHours / totalSleep) * 100)
           : null;
       const bedtime = night
-        ? `${String(night.startDate.getHours()).padStart(2, "0")}:${String(night.startDate.getMinutes()).padStart(2, "0")}`
+        ? `${String(night.startDate.getUTCHours()).padStart(2, "0")}:${String(night.startDate.getUTCMinutes()).padStart(2, "0")}`
         : null;
       const wakeTime = night
-        ? `${String(night.endDate.getHours()).padStart(2, "0")}:${String(night.endDate.getMinutes()).padStart(2, "0")}`
+        ? `${String(night.endDate.getUTCHours()).padStart(2, "0")}:${String(night.endDate.getUTCMinutes()).padStart(2, "0")}`
         : null;
 
       const activity = activityByDay.get(date);
@@ -286,10 +303,24 @@ function analyzeSleepRecoveryLink(rows: DailyMetricRow[], t: CrossMetricT): Slee
   }
 
   const shortDays = rows.filter((r) => r.sleepHours !== null && r.sleepHours < 6).length;
-  const shortHRV = roundNumber(averageNumbers(shortSleepNextHRV));
-  const normalHRV = roundNumber(averageNumbers(normalSleepNextHRV));
-  const shortRHR = roundNumber(averageNumbers(shortSleepNextRHR));
-  const normalRHR = roundNumber(averageNumbers(normalSleepNextRHR));
+  const hasEnoughHrvPairs =
+    shortSleepNextHRV.length >= MIN_ASSOCIATION_SAMPLES_PER_GROUP &&
+    normalSleepNextHRV.length >= MIN_ASSOCIATION_SAMPLES_PER_GROUP;
+  const hasEnoughRhrPairs =
+    shortSleepNextRHR.length >= MIN_ASSOCIATION_SAMPLES_PER_GROUP &&
+    normalSleepNextRHR.length >= MIN_ASSOCIATION_SAMPLES_PER_GROUP;
+  const shortHRV = hasEnoughHrvPairs
+    ? roundNumber(averageNumbers(shortSleepNextHRV))
+    : null;
+  const normalHRV = hasEnoughHrvPairs
+    ? roundNumber(averageNumbers(normalSleepNextHRV))
+    : null;
+  const shortRHR = hasEnoughRhrPairs
+    ? roundNumber(averageNumbers(shortSleepNextRHR))
+    : null;
+  const normalRHR = hasEnoughRhrPairs
+    ? roundNumber(averageNumbers(normalSleepNextRHR))
+    : null;
 
   const hrvDrop =
     shortHRV !== null && normalHRV !== null && normalHRV > 0
@@ -305,14 +336,20 @@ function analyzeSleepRecoveryLink(rows: DailyMetricRow[], t: CrossMetricT): Slee
     summary = t.sleepRecoveryNoShortNights;
   } else if (hrvDrop !== null && hrvDrop < -5) {
     summary = t.sleepRecoveryHrvDrop(shortDays, hrvDrop, shortHRV!, normalHRV!);
-  } else if (shortDays >= 3 && hrvDrop === null) {
-    summary = t.sleepRecoveryNoHrvData(shortDays);
+  } else if (!hasEnoughHrvPairs) {
+    summary = t.sleepRecoveryNoHrvData(
+      shortDays,
+      shortSleepNextHRV.length,
+      normalSleepNextHRV.length,
+    );
   } else {
     summary = t.sleepRecoveryTolerable(shortDays);
   }
 
   return {
     shortSleepDays: shortDays,
+    shortSleepPairedHrvDays: shortSleepNextHRV.length,
+    normalSleepPairedHrvDays: normalSleepNextHRV.length,
     shortSleepNextDayHRV: shortHRV,
     normalSleepNextDayHRV: normalHRV,
     hrvDropOnPoorSleep: hrvDrop,
@@ -387,7 +424,7 @@ function analyzeActivityRecoveryBalance(rows: DailyMetricRow[], t: CrossMetricT)
   let highStrainDays = 0;
 
   for (const row of rows) {
-    const totalExercise = (row.exerciseMinutes ?? 0) + (row.workoutMinutes ?? 0);
+    const totalExercise = effectiveExerciseMinutes(row) ?? 0;
     const isHighStrain = totalExercise >= 60;
     if (isHighStrain) highStrainDays++;
 
@@ -401,8 +438,15 @@ function analyzeActivityRecoveryBalance(rows: DailyMetricRow[], t: CrossMetricT)
     }
   }
 
-  const highHRV = roundNumber(averageNumbers(highStrainNextHRV));
-  const restHRV = roundNumber(averageNumbers(restDayNextHRV));
+  const hasEnoughPairs =
+    highStrainNextHRV.length >= MIN_ASSOCIATION_SAMPLES_PER_GROUP &&
+    restDayNextHRV.length >= MIN_ASSOCIATION_SAMPLES_PER_GROUP;
+  const highHRV = hasEnoughPairs
+    ? roundNumber(averageNumbers(highStrainNextHRV))
+    : null;
+  const restHRV = hasEnoughPairs
+    ? roundNumber(averageNumbers(restDayNextHRV))
+    : null;
   const adequate =
     highHRV !== null && restHRV !== null
       ? highHRV >= restHRV * 0.85
@@ -421,6 +465,8 @@ function analyzeActivityRecoveryBalance(rows: DailyMetricRow[], t: CrossMetricT)
 
   return {
     highStrainDays,
+    highStrainPairedHrvDays: highStrainNextHRV.length,
+    restDayPairedHrvDays: restDayNextHRV.length,
     highStrainNextDayHRV: highHRV,
     restDayNextDayHRV: restHRV,
     recoveryAdequate: adequate,
@@ -485,107 +531,18 @@ function analyzeRecoveryCoherence(rows: DailyMetricRow[], t: CrossMetricT): Reco
 // ── Composite Assessment ───────────────────────────────────────────
 
 function computeCompositeAssessment(
-  rows: DailyMetricRow[],
-  sleepConsistency: SleepConsistency,
-  recoveryCoherence: RecoveryCoherence,
   t: CrossMetricT,
 ): CompositeAssessment {
-  // Sleep Score (0-100)
-  const sleepHours = rows.filter((r) => r.sleepHours !== null).map((r) => r.sleepHours!);
-  const avgSleep = averageNumbers(sleepHours);
-  const deepPcts = rows.filter((r) => r.deepPct !== null).map((r) => r.deepPct!);
-  const avgDeep = averageNumbers(deepPcts);
-
-  let sleepScore: number | null = null;
-  if (avgSleep !== null && sleepHours.length >= 5) {
-    const durationFactor = linearScore(avgSleep, 5, 8.5) * 0.4;
-    const regularityFactor =
-      sleepConsistency.bedtimeStdMinutes !== null
-        ? linearScore(90 - sleepConsistency.bedtimeStdMinutes, 0, 60) * 0.3
-        : 50 * 0.3;
-    const deepFactor =
-      avgDeep !== null ? linearScore(avgDeep, 5, 20) * 0.3 : 50 * 0.3;
-    sleepScore = Math.round(durationFactor + regularityFactor + deepFactor);
-  }
-
-  // Recovery Score (0-100)
-  const hrvValues = rows.filter((r) => r.hrv !== null).map((r) => r.hrv!);
-  const rhrValues = rows.filter((r) => r.restingHR !== null).map((r) => r.restingHR!);
-  let recoveryScore: number | null = null;
-  if (hrvValues.length >= 5 || rhrValues.length >= 5) {
-    const hrvFactor =
-      recoveryCoherence.hrvTrend === "improving"
-        ? 90
-        : recoveryCoherence.hrvTrend === "stable"
-          ? 65
-          : recoveryCoherence.hrvTrend === "worsening"
-            ? 30
-            : 50;
-    const rhrFactor =
-      recoveryCoherence.rhrTrend === "improving"
-        ? 90
-        : recoveryCoherence.rhrTrend === "stable"
-          ? 65
-          : recoveryCoherence.rhrTrend === "worsening"
-            ? 30
-            : 50;
-    const sleepAdequacy = avgSleep !== null ? linearScore(avgSleep, 5, 7.5) : 50;
-    recoveryScore = Math.round(hrvFactor * 0.4 + rhrFactor * 0.3 + sleepAdequacy * 0.3);
-  }
-
-  // Activity Score (0-100)
-  const exerciseMins = rows
-    .filter((r) => r.exerciseMinutes !== null)
-    .map((r) => r.exerciseMinutes!);
-  let activityScore: number | null = null;
-  if (exerciseMins.length >= 5) {
-    const weeklyAvg = (averageNumbers(exerciseMins) ?? 0) * 7;
-    const volumeFactor = linearScore(weeklyAvg, 0, 150) * 0.5;
-    const exerciseStd = stdDev(exerciseMins);
-    const mean = averageNumbers(exerciseMins) ?? 1;
-    const cv = exerciseStd !== null && mean > 0 ? exerciseStd / mean : 1;
-    const consistencyFactor = linearScore(1 - cv, 0, 1) * 0.5;
-    activityScore = Math.round(volumeFactor + consistencyFactor);
-  }
-
-  // Overall readiness
-  const scores = [sleepScore, recoveryScore, activityScore].filter(
-    (s): s is number => s !== null,
-  );
-  let overallReadiness: CompositeAssessment["overallReadiness"] = null;
-  if (scores.length >= 2) {
-    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-    if (avg >= 70) overallReadiness = "good";
-    else if (avg >= 45) overallReadiness = "moderate";
-    else overallReadiness = "low";
-  }
-
-  const readinessLabel =
-    overallReadiness === "good"
-      ? t.readinessGood
-      : overallReadiness === "moderate"
-        ? t.readinessModerate
-        : overallReadiness === "low"
-          ? t.readinessLow
-          : t.readinessInsufficientData;
-
-  const parts: string[] = [];
-  if (sleepScore !== null) parts.push(t.compositeSleep(sleepScore));
-  if (recoveryScore !== null) parts.push(t.compositeRecovery(recoveryScore));
-  if (activityScore !== null) parts.push(t.compositeActivity(activityScore));
-
-  const summary =
-    parts.length > 0
-      ? `${t.compositeSummary(parts.join(t.compositeScoreSeparator), readinessLabel)}${
-          overallReadiness === "low"
-            ? t.compositeLowAdvice
-            : overallReadiness === "moderate"
-              ? t.compositeModerateAdvice
-              : t.compositeGoodAdvice
-        }`
-      : t.compositeInsufficientDimensions;
-
-  return { sleepScore, recoveryScore, activityScore, overallReadiness, summary };
+  // Keep the legacy shape for consumers, but do not emit arbitrary 0–100 health
+  // scores. The previous fixed weights and cut-offs were not clinically
+  // validated and created false precision across heterogeneous devices/users.
+  return {
+    sleepScore: null,
+    recoveryScore: null,
+    activityScore: null,
+    overallReadiness: null,
+    summary: t.compositeInsufficientDimensions,
+  };
 }
 
 // ── Pattern Detection ──────────────────────────────────────────────
@@ -595,11 +552,13 @@ function detectPatterns(rows: DailyMetricRow[], t: CrossMetricT): string[] {
 
   // Weekend warrior: weekday vs weekend exercise difference
   const weekdayExercise = rows
-    .filter((r) => !isWeekend(r.date) && r.exerciseMinutes !== null)
-    .map((r) => r.exerciseMinutes!);
+    .filter((r) => !isWeekend(r.date))
+    .map(effectiveExerciseMinutes)
+    .filter((value): value is number => value !== null);
   const weekendExercise = rows
-    .filter((r) => isWeekend(r.date) && r.exerciseMinutes !== null)
-    .map((r) => r.exerciseMinutes!);
+    .filter((r) => isWeekend(r.date))
+    .map(effectiveExerciseMinutes)
+    .filter((value): value is number => value !== null);
 
   if (weekdayExercise.length >= 5 && weekendExercise.length >= 2) {
     const wdAvg = averageNumbers(weekdayExercise) ?? 0;
@@ -644,11 +603,12 @@ function detectPatterns(rows: DailyMetricRow[], t: CrossMetricT): string[] {
     }
   }
 
-  // Recovery strain: consecutive high exercise + declining HRV
+  // Consecutive high-activity days. Wording stays descriptive because duration
+  // alone cannot establish inadequate recovery.
   let consecutiveHighStrain = 0;
   let maxConsecutive = 0;
   for (const row of rows) {
-    const total = (row.exerciseMinutes ?? 0) + (row.workoutMinutes ?? 0);
+    const total = effectiveExerciseMinutes(row) ?? 0;
     if (total >= 45) {
       consecutiveHighStrain++;
       maxConsecutive = Math.max(maxConsecutive, consecutiveHighStrain);
@@ -706,9 +666,8 @@ function findNotableDays(rows: DailyMetricRow[], t: CrossMetricT): NotableDay[] 
   findExtreme(t.notableHRV, t.notableUnitMs, (r) => r.hrv, "high");
   findExtreme(t.notableRHR, t.notableUnitBpm, (r) => r.restingHR, "low");
   findExtreme(t.notableExercise, t.notableUnitMinutes, (r) => {
-    const e = r.exerciseMinutes ?? 0;
-    const w = r.workoutMinutes ?? 0;
-    return e + w > 0 ? e + w : null;
+    const minutes = effectiveExerciseMinutes(r);
+    return minutes !== null && minutes > 0 ? minutes : null;
   }, "high");
 
   return days;
@@ -728,12 +687,7 @@ export function analyzeCrossMetrics(
   const sleepConsistency = analyzeSleepConsistency(dailyRows, t);
   const activityRecoveryBalance = analyzeActivityRecoveryBalance(dailyRows, t);
   const recoveryCoherence = analyzeRecoveryCoherence(dailyRows, t);
-  const compositeAssessment = computeCompositeAssessment(
-    dailyRows,
-    sleepConsistency,
-    recoveryCoherence,
-    t,
-  );
+  const compositeAssessment = computeCompositeAssessment(t);
   const patterns = detectPatterns(dailyRows, t);
 
   return {

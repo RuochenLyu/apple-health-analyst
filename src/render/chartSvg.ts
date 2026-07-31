@@ -1,9 +1,12 @@
-import type { ChartSeries } from "../types.js";
+import type { ChartPoint, ChartSeries } from "../types.js";
 
 interface ChartSize {
   width: number;
   height: number;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MIN_MARKER_GAP = 8;
 
 /**
  * Minimal i18n surface the chart renderer depends on.
@@ -14,6 +17,17 @@ export interface ChartLabelsT {
   sparklineAriaLabel: (label: string) => string;
   barChartAriaLabel: (label: string) => string;
   lineChartAriaLabel: string;
+  chartSeriesAriaSummary: (
+    label: string,
+    count: number,
+    firstLabel: string,
+    firstValue: string,
+    latestLabel: string,
+    latestValue: string,
+    minValue: string,
+    maxValue: string,
+  ) => string;
+  chartNoDataAriaSummary: string;
 }
 
 /** Format a tooltip numeric value: trim trailing zeros, cap at 2 decimals. */
@@ -31,8 +45,70 @@ function formatTooltipValue(value: number): string {
     .replace(/\.?0+$/, "");
 }
 
+/**
+ * Keep chart units as supplied, except for the one English plural that can
+ * otherwise produce the visibly incorrect "1 sessions" in SVG tooltips.
+ */
+function formatUnitSuffix(unit: string, value: number): string {
+  const normalized = unit.trim();
+  if (!normalized) {
+    return "";
+  }
+  return ` ${normalized === "sessions" && value === 1 ? "session" : normalized}`;
+}
+
 function escapeAttribute(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function chartSeriesSummary(
+  series: ChartSeries,
+  t?: ChartLabelsT,
+): string | null {
+  const points = series.points.filter(
+    (point): point is ChartPoint & { value: number } =>
+      typeof point.value === "number" && Number.isFinite(point.value),
+  );
+  if (points.length === 0) {
+    return null;
+  }
+
+  const first = points[0];
+  const latest = points[points.length - 1];
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const displayValue = (value: number): string =>
+    `${formatTooltipValue(value)}${formatUnitSuffix(series.unit, value)}`;
+
+  if (t) {
+    return t.chartSeriesAriaSummary(
+      series.label,
+      points.length,
+      first.label,
+      displayValue(first.value),
+      latest.label,
+      displayValue(latest.value),
+      displayValue(min),
+      displayValue(max),
+    );
+  }
+
+  const pointWord = points.length === 1 ? "data point" : "data points";
+  return `${series.label}: ${points.length} ${pointWord}; first ${first.label}, ${displayValue(first.value)}; latest ${latest.label}, ${displayValue(latest.value)}; range ${displayValue(min)} to ${displayValue(max)}.`;
+}
+
+function chartAriaDescription(
+  seriesList: ChartSeries[],
+  t?: ChartLabelsT,
+): string {
+  const summaries = seriesList
+    .map((series) => chartSeriesSummary(series, t))
+    .filter((summary): summary is string => summary !== null);
+  if (summaries.length > 0) {
+    return summaries.join(" ");
+  }
+  return t?.chartNoDataAriaSummary ?? "No numeric data points.";
 }
 
 function numericPoints(series: ChartSeries): number[] {
@@ -59,6 +135,151 @@ function xPosition(index: number, total: number, left: number, right: number): n
     return (left + right) / 2;
   }
   return left + (index / (total - 1)) * (right - left);
+}
+
+function pointTime(point: ChartPoint): number | null {
+  const start = Date.parse(point.start);
+  const end = Date.parse(point.end);
+  if (!Number.isFinite(start)) {
+    return null;
+  }
+  return Number.isFinite(end) ? start + (end - start) / 2 : start;
+}
+
+function timeExtent(seriesList: ChartSeries[]): { min: number; max: number } | null {
+  const timestamps = seriesList.flatMap((series) =>
+    series.points
+      .map(pointTime)
+      .filter((value): value is number => value !== null),
+  );
+  if (timestamps.length < 2) {
+    return null;
+  }
+  const min = Math.min(...timestamps);
+  const max = Math.max(...timestamps);
+  return min === max ? null : { min, max };
+}
+
+function temporalXPosition(
+  point: ChartPoint,
+  fallbackIndex: number,
+  fallbackTotal: number,
+  left: number,
+  right: number,
+  timeRange: { min: number; max: number } | null,
+): number {
+  const timestamp = pointTime(point);
+  if (timestamp === null || !timeRange) {
+    return xPosition(fallbackIndex, fallbackTotal, left, right);
+  }
+  return left + ((timestamp - timeRange.min) / (timeRange.max - timeRange.min)) * (right - left);
+}
+
+function formatTemporalAxisLabel(timestamp: number, spanMs: number): string {
+  const iso = new Date(timestamp).toISOString();
+  if (spanMs >= 180 * DAY_MS) {
+    return iso.slice(0, 7);
+  }
+  if (spanMs >= 2 * DAY_MS) {
+    return iso.slice(5, 10);
+  }
+  return `${iso.slice(5, 10)} ${iso.slice(11, 16)}`;
+}
+
+function renderTemporalAxisLabels(
+  timeRange: { min: number; max: number },
+  maxLabels: number,
+  left: number,
+  right: number,
+  y: number,
+): string {
+  const spanMs = timeRange.max - timeRange.min;
+  const availableCalendarDays = Math.max(2, Math.floor(spanMs / DAY_MS) + 1);
+  const count = Math.max(2, Math.min(maxLabels, availableCalendarDays));
+
+  return Array.from({ length: count }, (_, index) => {
+    const ratio = count === 1 ? 0 : index / (count - 1);
+    const timestamp = timeRange.min + spanMs * ratio;
+    const x = left + (right - left) * ratio;
+    const anchor = index === 0 ? "start" : index === count - 1 ? "end" : "middle";
+    return `<text data-axis="x" x="${x}" y="${y}" text-anchor="${anchor}" font-size="12" fill="#596579">${escapeAttribute(formatTemporalAxisLabel(timestamp, spanMs))}</text>`;
+  }).join("");
+}
+
+function gapTolerance(point: ChartPoint): number {
+  if (point.granularity === "day") return 3 * DAY_MS;
+  if (point.granularity === "week") return 21 * DAY_MS;
+  return 93 * DAY_MS;
+}
+
+function hasLargeTemporalGap(previous: ChartPoint, current: ChartPoint): boolean {
+  const previousEnd = Date.parse(previous.end);
+  const currentStart = Date.parse(current.start);
+  if (!Number.isFinite(previousEnd) || !Number.isFinite(currentStart)) {
+    return false;
+  }
+  return currentStart - previousEnd > Math.max(gapTolerance(previous), gapTolerance(current));
+}
+
+function visibleMarkerIndices(
+  series: ChartSeries,
+  left: number,
+  right: number,
+  timeRange: { min: number; max: number } | null,
+): Set<number> {
+  const candidates = series.points
+    .map((point, index) => ({
+      index,
+      x: temporalXPosition(point, index, series.points.length, left, right, timeRange),
+      value: point.value,
+    }))
+    .filter(
+      (entry): entry is { index: number; x: number; value: number } =>
+        typeof entry.value === "number" && Number.isFinite(entry.value),
+    );
+
+  if (candidates.length <= 1) {
+    return new Set(candidates.map((entry) => entry.index));
+  }
+
+  const first = candidates[0];
+  const last = candidates[candidates.length - 1];
+  if (last.x - first.x < MIN_MARKER_GAP) {
+    return new Set([last.index]);
+  }
+
+  const selected = new Set<number>([first.index]);
+  let previousVisibleX = first.x;
+  for (const candidate of candidates.slice(1, -1)) {
+    if (
+      candidate.x - previousVisibleX >= MIN_MARKER_GAP &&
+      last.x - candidate.x >= MIN_MARKER_GAP
+    ) {
+      selected.add(candidate.index);
+      previousVisibleX = candidate.x;
+    }
+  }
+  selected.add(last.index);
+  return selected;
+}
+
+function projectedBarWidth(
+  point: ChartPoint,
+  timeRange: { min: number; max: number } | null,
+  plotWidth: number,
+  fallbackWidth: number,
+): number {
+  if (!timeRange) {
+    return fallbackWidth;
+  }
+  const start = Date.parse(point.start);
+  const end = Date.parse(point.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return fallbackWidth;
+  }
+  const span = Math.max(timeRange.max - timeRange.min, DAY_MS);
+  const duration = Math.max(end - start + 1, DAY_MS);
+  return Math.max(0.08, Math.min(32, (duration / span) * plotWidth * 0.72));
 }
 
 function yPosition(value: number, min: number, max: number, top: number, bottom: number): number {
@@ -138,10 +359,12 @@ export function renderLineSparkline(
   const polyline = points.length > 0 ? points.join(" ") : `${pad},${size.height / 2}`;
 
   const ariaLabel = t ? t.sparklineAriaLabel(series.label) : `${series.label} sparkline`;
+  const ariaDescription = chartAriaDescription([series], t);
 
-  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(
+  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(
     ariaLabel,
   )}" xmlns="http://www.w3.org/2000/svg">
+  <desc>${escapeAttribute(ariaDescription)}</desc>
   <polyline fill="none" stroke="${escapeAttribute(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${polyline}" />
 </svg>`;
 }
@@ -159,42 +382,70 @@ export function renderBarChart(
   const margin = { top: 24, right: 18, bottom: 36, left: 18 };
   const plotW = size.width - margin.left - margin.right;
   const plotH = size.height - margin.top - margin.bottom;
-  const barWidth = Math.max(6, plotW / Math.max(series.points.length, 1) - 4);
+  const fallbackBarWidth = Math.max(
+    6,
+    Math.min(32, (plotW / Math.max(series.points.length, 1)) * 0.58),
+  );
+  const xTimeRange = timeExtent([series]);
+  const chartLeft = margin.left + 16;
+  const chartRight = size.width - margin.right - 16;
+  const chartWidth = chartRight - chartLeft;
 
   const bars = series.points
     .map((point, index) => {
       if (point.value === null) {
         return "";
       }
+      const barWidth = projectedBarWidth(
+        point,
+        xTimeRange,
+        chartWidth,
+        fallbackBarWidth,
+      );
       const height = (point.value / max) * plotH;
-      const x = margin.left + index * (barWidth + 4);
+      const xCenter = temporalXPosition(
+        point,
+        index,
+        series.points.length,
+        chartLeft,
+        chartRight,
+        xTimeRange,
+      );
+      const x = xCenter - barWidth / 2;
       const y = margin.top + plotH - height;
-      const unitSuffix = series.unit ? ` ${series.unit.trim()}` : "";
+      const unitSuffix = formatUnitSuffix(series.unit, point.value);
       const title = `${point.label}: ${formatTooltipValue(point.value)}${unitSuffix}`;
-      return `<g><title>${escapeAttribute(title)}</title><rect x="${x}" y="${y}" width="${barWidth}" height="${Math.max(
+      const valueLabel = barWidth >= 18
+        ? `<text x="${xCenter}" y="${y - 5}" text-anchor="middle" font-size="12" fill="#596579">${Math.round(point.value)}</text>`
+        : "";
+      return `<g><title>${escapeAttribute(title)}</title><rect data-chart-bar="true" x="${x}" y="${y}" width="${barWidth}" height="${Math.max(
         height,
         1,
-      )}" rx="4" fill="${escapeAttribute(color)}" opacity="0.85" /><text x="${x + barWidth / 2}" y="${y - 5}" text-anchor="middle" font-size="10" fill="#64748B">${Math.round(point.value)}</text></g>`;
+      )}" rx="${Math.min(4, barWidth / 2)}" fill="${escapeAttribute(color)}" opacity="0.85" />${valueLabel}</g>`;
     })
     .join("");
 
   // X-axis labels
-  const labelIndices = pickLabelIndices(series.points.length, 6);
-  const xLabels = labelIndices
-    .map((i) => {
-      const point = series.points[i];
-      if (!point) return "";
-      const x = margin.left + i * (barWidth + 4) + barWidth / 2;
-      const y = margin.top + plotH + 16;
-      return `<text x="${x}" y="${y}" text-anchor="middle" font-size="10" fill="#94A3B8">${escapeAttribute(shortenLabel(point.label))}</text>`;
-    })
-    .join("");
+  const axisY = margin.top + plotH + 16;
+  const xLabels = xTimeRange
+    ? renderTemporalAxisLabels(xTimeRange, 6, chartLeft, chartRight, axisY)
+    : pickLabelIndices(series.points.length, 6)
+        .map((index, position, indices) => {
+          const point = series.points[index];
+          if (!point) return "";
+          const x = xPosition(index, series.points.length, chartLeft, chartRight);
+          const anchor = position === 0 ? "start" : position === indices.length - 1 ? "end" : "middle";
+          return `<text data-axis="x" x="${x}" y="${axisY}" text-anchor="${anchor}" font-size="12" fill="#596579">${escapeAttribute(shortenLabel(point.label))}</text>`;
+        })
+        .join("");
 
   const ariaLabel = t ? t.barChartAriaLabel(series.label) : `${series.label} bar chart`;
+  const ariaDescription = chartAriaDescription([series], t);
 
-  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(
+  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(
     ariaLabel,
   )}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <desc>${escapeAttribute(ariaDescription)}</desc>
   ${bars}
   ${xLabels}
 </svg>`;
@@ -208,8 +459,14 @@ export function renderMultiSeriesLineChart(
   size: ChartSize = { width: 720, height: 220 },
   t?: ChartLabelsT,
 ): string {
+  if (seriesList.length === 0) {
+    const ariaLabel = t ? t.lineChartAriaLabel : "Trend chart";
+    const ariaDescription = chartAriaDescription([], t);
+    return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg"><desc>${escapeAttribute(ariaDescription)}</desc></svg>`;
+  }
   const values = seriesList.flatMap((series) => numericPoints(series));
   const { min, max } = extent(values);
+  const xTimeRange = timeExtent(seriesList);
 
   const margin = { top: 16, right: 16, bottom: 36, left: 48 };
   const plotLeft = margin.left;
@@ -223,27 +480,33 @@ export function renderMultiSeriesLineChart(
     .map((step) => {
       const yVal = max - step * (max - min);
       const y = plotTop + step * (plotBottom - plotTop);
-      return `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" /><text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94A3B8">${escapeAttribute(formatAxisValue(yVal))}</text>`;
+      return `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#D7DEE7" stroke-width="1" stroke-dasharray="4,3" /><text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="12" fill="#596579">${escapeAttribute(formatAxisValue(yVal))}</text>`;
     })
     .join("");
 
-  // X-axis labels from the longest series
+  // X-axis labels follow the actual time domain, not point-array indices.
   const longestSeries = seriesList.reduce(
     (best, series) => (series.points.length > best.points.length ? series : best),
     seriesList[0],
   );
-  const maxXLabels = Math.min(7, Math.floor((plotRight - plotLeft) / 70));
-  const xLabelIndices = longestSeries ? pickLabelIndices(longestSeries.points.length, maxXLabels) : [];
-  const xLabels = longestSeries
-    ? xLabelIndices
-        .map((i) => {
-          const point = longestSeries.points[i];
+  const maxXLabels = Math.max(2, Math.min(7, Math.floor((plotRight - plotLeft) / 70)));
+  const xLabels = xTimeRange
+    ? renderTemporalAxisLabels(
+        xTimeRange,
+        maxXLabels,
+        plotLeft,
+        plotRight,
+        plotBottom + 18,
+      )
+    : pickLabelIndices(longestSeries.points.length, maxXLabels)
+        .map((index, position, indices) => {
+          const point = longestSeries.points[index];
           if (!point) return "";
-          const x = xPosition(i, longestSeries.points.length, plotLeft, plotRight);
-          return `<text x="${x}" y="${plotBottom + 16}" text-anchor="middle" font-size="10" fill="#94A3B8">${escapeAttribute(shortenLabel(point.label))}</text>`;
+          const x = xPosition(index, longestSeries.points.length, plotLeft, plotRight);
+          const anchor = position === 0 ? "start" : position === indices.length - 1 ? "end" : "middle";
+          return `<text data-axis="x" x="${x}" y="${plotBottom + 18}" text-anchor="${anchor}" font-size="12" fill="#596579">${escapeAttribute(shortenLabel(point.label))}</text>`;
         })
-        .join("")
-    : "";
+        .join("");
 
   // Data paths + dots + hover titles
   const paths = seriesList
@@ -251,26 +514,45 @@ export function renderMultiSeriesLineChart(
       const color = colors[seriesIndex % colors.length];
       const segments: string[] = [];
       let current = "";
-
       const dots: string[] = [];
+      const visibleMarkers = visibleMarkerIndices(
+        series,
+        plotLeft,
+        plotRight,
+        xTimeRange,
+      );
+      let previousPoint: ChartPoint | null = null;
 
       series.points.forEach((point, pointIndex) => {
-        if (point.value === null) {
+        if (point.value === null || !Number.isFinite(point.value)) {
           if (current) {
             segments.push(current);
             current = "";
           }
+          previousPoint = null;
           return;
         }
-        const x = xPosition(pointIndex, series.points.length, plotLeft, plotRight);
+        if (previousPoint && hasLargeTemporalGap(previousPoint, point) && current) {
+          segments.push(current);
+          current = "";
+        }
+        const x = temporalXPosition(
+          point,
+          pointIndex,
+          series.points.length,
+          plotLeft,
+          plotRight,
+          xTimeRange,
+        );
         const y = yPosition(point.value, min, max, plotTop, plotBottom);
         current += `${current ? " L" : "M"} ${x} ${y}`;
 
-        const unitSuffix = series.unit ? ` ${series.unit.trim()}` : "";
+        const unitSuffix = formatUnitSuffix(series.unit, point.value);
         const title = `${series.label} ${point.label}: ${formatTooltipValue(point.value)}${unitSuffix}`;
-        dots.push(
-          `<circle cx="${x}" cy="${y}" r="3" fill="${escapeAttribute(color)}" stroke="#fff" stroke-width="1.5"><title>${escapeAttribute(title)}</title></circle>`,
-        );
+        dots.push(visibleMarkers.has(pointIndex)
+          ? `<circle data-marker="visible" cx="${x}" cy="${y}" r="2.6" fill="${escapeAttribute(color)}" stroke="#fff" stroke-width="1.25"><title>${escapeAttribute(title)}</title></circle>`
+          : `<circle data-marker="hit" cx="${x}" cy="${y}" r="4" fill="transparent" stroke="none"><title>${escapeAttribute(title)}</title></circle>`);
+        previousPoint = point;
       });
       if (current) {
         segments.push(current);
@@ -289,9 +571,12 @@ export function renderMultiSeriesLineChart(
     })
     .join("");
 
-  const ariaLabel = t ? t.lineChartAriaLabel : "Trend chart";
+  const seriesNames = seriesList.map((series) => series.label).join(", ");
+  const ariaLabel = `${seriesNames}: ${t ? t.lineChartAriaLabel : "Trend chart"}`;
+  const ariaDescription = chartAriaDescription(seriesList, t);
 
-  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <desc>${escapeAttribute(ariaDescription)}</desc>
   ${gridLines}
   ${xLabels}
   ${paths}
@@ -326,7 +611,7 @@ function clipAxisMax(values: number[]): number {
  */
 function clipSymmetricMax(values: number[]): number {
   const abs = values.map(Math.abs);
-  return Math.max(20, clipAxisMax(abs));
+  return Math.max(1, clipAxisMax(abs));
 }
 
 /**
@@ -336,8 +621,8 @@ function clipSymmetricMax(values: number[]): number {
  *   • Top panel (~65% of the plot area): CTL (thick orange) + ATL (thin blue)
  *     on a single linear y-axis, 0-rooted so the relative magnitudes are
  *     immediately comparable.
- *   • Bottom panel (~30%): TSB area with a zero baseline — positive region
- *     filled green (fresh), negative region filled red (carrying fatigue).
+ *   • Bottom panel (~30%): load-balance area with a zero baseline — positive
+ *     means recent load is below the 42-day baseline, negative means above.
  *
  * Extreme ATL or TSB spikes are clipped to the 97.5th percentile so a single
  * outlier session can't flatten the rest of the curve.
@@ -357,9 +642,12 @@ export function renderPmcChart(
   const plotBottom = size.height - margin.bottom;
 
   const pointCount = Math.max(ctl.points.length, atl.points.length, tsb.points.length);
-  const ariaLabel = t ? t.lineChartAriaLabel : "Trend chart";
+  const xTimeRange = timeExtent([ctl, atl, tsb]);
+  const seriesNames = [ctl.label, atl.label, tsb.label].join(", ");
+  const ariaLabel = `${seriesNames}: ${t ? t.lineChartAriaLabel : "Trend chart"}`;
+  const ariaDescription = chartAriaDescription([ctl, atl, tsb], t);
   if (pointCount === 0) {
-    return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg"></svg>`;
+    return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg"><desc>${escapeAttribute(ariaDescription)}</desc></svg>`;
   }
 
   // Split the plot area vertically: top panel for CTL/ATL, bottom for TSB.
@@ -382,8 +670,8 @@ export function renderPmcChart(
       const val = topMax - step * (topMax - topMin);
       const y = topPlotTop + step * (topPlotBottom - topPlotTop);
       return (
-        `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" />` +
-        `<text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748B">${escapeAttribute(formatAxisValue(val))}</text>`
+        `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#D7DEE7" stroke-width="1" stroke-dasharray="4,3" />` +
+        `<text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="12" fill="#596579">${escapeAttribute(formatAxisValue(val))}</text>`
       );
     })
     .join("");
@@ -403,8 +691,8 @@ export function renderPmcChart(
       const val = tsbAxisMax - step * (tsbAxisMax - tsbAxisMin);
       const y = bottomPlotTop + step * (bottomPlotBottom - bottomPlotTop);
       return (
-        `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" />` +
-        `<text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748B">${escapeAttribute((val > 0 ? "+" : "") + formatAxisValue(val))}</text>`
+        `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#D7DEE7" stroke-width="1" stroke-dasharray="4,3" />` +
+        `<text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="12" fill="#596579">${escapeAttribute((val > 0 ? "+" : "") + formatAxisValue(val))}</text>`
       );
     })
     .join("");
@@ -419,40 +707,63 @@ export function renderPmcChart(
       : atl.points.length >= tsb.points.length
         ? atl
         : tsb;
-  const maxXLabels = Math.min(8, Math.floor((plotRight - plotLeft) / 80));
-  const xLabelIndices = pickLabelIndices(longest.points.length, maxXLabels);
-  const xLabels = xLabelIndices
-    .map((i) => {
-      const point = longest.points[i];
-      if (!point) return "";
-      const x = xPosition(i, longest.points.length, plotLeft, plotRight);
-      return `<text x="${x}" y="${plotBottom + 16}" text-anchor="middle" font-size="10" fill="#94A3B8">${escapeAttribute(shortenLabel(point.label))}</text>`;
-    })
-    .join("");
+  const maxXLabels = Math.max(2, Math.min(8, Math.floor((plotRight - plotLeft) / 80)));
+  const xLabels = xTimeRange
+    ? renderTemporalAxisLabels(
+        xTimeRange,
+        maxXLabels,
+        plotLeft,
+        plotRight,
+        plotBottom + 18,
+      )
+    : pickLabelIndices(longest.points.length, maxXLabels)
+        .map((index, position, indices) => {
+          const point = longest.points[index];
+          if (!point) return "";
+          const x = xPosition(index, longest.points.length, plotLeft, plotRight);
+          const anchor = position === 0 ? "start" : position === indices.length - 1 ? "end" : "middle";
+          return `<text data-axis="x" x="${x}" y="${plotBottom + 18}" text-anchor="${anchor}" font-size="12" fill="#596579">${escapeAttribute(shortenLabel(point.label))}</text>`;
+        })
+        .join("");
 
   // ── Top-panel line helpers ────────────────────────────────────────
   const drawClippedLine = (series: ChartSeries, color: string, strokeWidth: number): string => {
     const segments: string[] = [];
     let current = "";
     const dots: string[] = [];
+    const visibleMarkers = visibleMarkerIndices(series, plotLeft, plotRight, xTimeRange);
+    let previousPoint: ChartPoint | null = null;
     series.points.forEach((point, index) => {
-      if (point.value === null) {
+      if (point.value === null || !Number.isFinite(point.value)) {
         if (current) {
           segments.push(current);
           current = "";
         }
+        previousPoint = null;
         return;
       }
+      if (previousPoint && hasLargeTemporalGap(previousPoint, point) && current) {
+        segments.push(current);
+        current = "";
+      }
       const clipped = Math.min(point.value, topMax);
-      const x = xPosition(index, series.points.length, plotLeft, plotRight);
+      const x = temporalXPosition(
+        point,
+        index,
+        series.points.length,
+        plotLeft,
+        plotRight,
+        xTimeRange,
+      );
       const y = yPosition(clipped, topMin, topMax, topPlotTop, topPlotBottom);
       current += `${current ? " L" : "M"} ${x} ${y}`;
-      const unit = series.unit ? ` ${series.unit.trim()}` : "";
+      const unit = formatUnitSuffix(series.unit, point.value);
       // Show the *real* (un-clipped) value in the tooltip.
       const title = `${series.label} ${point.label}: ${formatTooltipValue(point.value)}${unit}`;
-      dots.push(
-        `<circle cx="${x}" cy="${y}" r="2.5" fill="${escapeAttribute(color)}" stroke="#fff" stroke-width="1"><title>${escapeAttribute(title)}</title></circle>`,
-      );
+      dots.push(visibleMarkers.has(index)
+        ? `<circle data-marker="visible" cx="${x}" cy="${y}" r="2.5" fill="${escapeAttribute(color)}" stroke="#fff" stroke-width="1"><title>${escapeAttribute(title)}</title></circle>`
+        : `<circle data-marker="hit" cx="${x}" cy="${y}" r="4" fill="transparent" stroke="none"><title>${escapeAttribute(title)}</title></circle>`);
+      previousPoint = point;
     });
     if (current) segments.push(current);
     const paths = segments
@@ -470,6 +781,7 @@ export function renderPmcChart(
   const tsbAreaPaths: string[] = [];
   let segment: Array<{ x: number; y: number; value: number }> = [];
   let segmentSign: 1 | -1 | 0 = 0;
+  let previousTsbPoint: ChartPoint | null = null;
   const flushSegment = () => {
     if (segment.length === 0) return;
     const color = segmentSign >= 0 ? colors.tsbPositive : colors.tsbNegative;
@@ -484,12 +796,23 @@ export function renderPmcChart(
     segmentSign = 0;
   };
   tsb.points.forEach((point, index) => {
-    if (point.value === null) {
+    if (point.value === null || !Number.isFinite(point.value)) {
       flushSegment();
+      previousTsbPoint = null;
       return;
     }
+    if (previousTsbPoint && hasLargeTemporalGap(previousTsbPoint, point)) {
+      flushSegment();
+    }
     const clipped = Math.max(Math.min(point.value, tsbAxisMax), tsbAxisMin);
-    const x = xPosition(index, tsb.points.length, plotLeft, plotRight);
+    const x = temporalXPosition(
+      point,
+      index,
+      tsb.points.length,
+      plotLeft,
+      plotRight,
+      xTimeRange,
+    );
     const y = yPosition(clipped, tsbAxisMin, tsbAxisMax, bottomPlotTop, bottomPlotBottom);
     const sign: 1 | -1 = point.value >= 0 ? 1 : -1;
     if (segment.length > 0 && sign !== segmentSign) {
@@ -503,6 +826,7 @@ export function renderPmcChart(
     }
     segment.push({ x, y, value: point.value });
     segmentSign = sign;
+    previousTsbPoint = point;
   });
   flushSegment();
 
@@ -510,23 +834,41 @@ export function renderPmcChart(
   const tsbStrokeSegments: string[] = [];
   let cur = "";
   const tsbDots: string[] = [];
+  let previousTsbStrokePoint: ChartPoint | null = null;
   tsb.points.forEach((point, index) => {
-    if (point.value === null) {
+    if (point.value === null || !Number.isFinite(point.value)) {
       if (cur) {
         tsbStrokeSegments.push(cur);
         cur = "";
       }
+      previousTsbStrokePoint = null;
       return;
     }
+    if (
+      previousTsbStrokePoint &&
+      hasLargeTemporalGap(previousTsbStrokePoint, point) &&
+      cur
+    ) {
+      tsbStrokeSegments.push(cur);
+      cur = "";
+    }
     const clipped = Math.max(Math.min(point.value, tsbAxisMax), tsbAxisMin);
-    const x = xPosition(index, tsb.points.length, plotLeft, plotRight);
+    const x = temporalXPosition(
+      point,
+      index,
+      tsb.points.length,
+      plotLeft,
+      plotRight,
+      xTimeRange,
+    );
     const y = yPosition(clipped, tsbAxisMin, tsbAxisMax, bottomPlotTop, bottomPlotBottom);
     cur += `${cur ? " L" : "M"} ${x} ${y}`;
-    const unit = tsb.unit ? ` ${tsb.unit.trim()}` : "";
+    const unit = formatUnitSuffix(tsb.unit, point.value);
     const title = `${tsb.label} ${point.label}: ${formatTooltipValue(point.value)}${unit}`;
     tsbDots.push(
-      `<circle cx="${x}" cy="${y}" r="3" fill="${escapeAttribute(point.value >= 0 ? colors.tsbPositive : colors.tsbNegative)}" opacity="0.0001"><title>${escapeAttribute(title)}</title></circle>`,
+      `<circle data-marker="hit" cx="${x}" cy="${y}" r="3" fill="transparent" stroke="none"><title>${escapeAttribute(title)}</title></circle>`,
     );
+    previousTsbStrokePoint = point;
   });
   if (cur) tsbStrokeSegments.push(cur);
   const tsbStroke = tsbStrokeSegments
@@ -536,7 +878,8 @@ export function renderPmcChart(
     )
     .join("");
 
-  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <desc>${escapeAttribute(ariaDescription)}</desc>
   ${topGrid}
   ${tsbGrid}
   ${separator}
@@ -589,36 +932,51 @@ export function renderDualAxisChart(
       const barVal = barAxisTop * (1 - step);
       const lineVal = lineAxisMax - step * (lineAxisMax - lineAxisMin);
       const y = plotTop + step * (plotBottom - plotTop);
-      return `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,3" />`
-        + `<text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="${escapeAttribute(colors.bar)}">${escapeAttribute(formatAxisValue(barVal))}</text>`
-        + `<text x="${plotRight + 6}" y="${y + 4}" text-anchor="start" font-size="10" fill="${escapeAttribute(colors.line)}">${escapeAttribute(formatAxisValue(lineVal))}</text>`;
+      return `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="#D7DEE7" stroke-width="1" stroke-dasharray="4,3" />`
+        + `<text x="${plotLeft - 6}" y="${y + 4}" text-anchor="end" font-size="12" fill="${escapeAttribute(colors.bar)}">${escapeAttribute(formatAxisValue(barVal))}</text>`
+        + `<text x="${plotRight + 6}" y="${y + 4}" text-anchor="start" font-size="12" fill="${escapeAttribute(colors.line)}">${escapeAttribute(formatAxisValue(lineVal))}</text>`;
     })
     .join("");
 
   const pointCount = Math.max(bars.points.length, line.points.length);
+  const seriesNames = [bars.label, line.label].join(", ");
+  const ariaLabel = `${seriesNames}: ${t ? t.lineChartAriaLabel : "Trend chart"}`;
+  const ariaDescription = chartAriaDescription([bars, line], t);
   if (pointCount === 0) {
-    const ariaLabel = t ? t.lineChartAriaLabel : "Trend chart";
-    return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg"></svg>`;
+    return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg"><desc>${escapeAttribute(ariaDescription)}</desc></svg>`;
   }
 
   // Bar width & inner padding: keep first/last bars from overflowing the Y-axis label columns.
-  const barWidth = Math.max(6, ((plotRight - plotLeft) / pointCount) * 0.55);
-  const barXPadding = barWidth / 2 + 4;
+  const fallbackBarWidth = Math.max(
+    6,
+    Math.min(32, ((plotRight - plotLeft) / pointCount) * 0.55),
+  );
+  const barXPadding = Math.min(16, fallbackBarWidth / 2) + 4;
   const chartLeft = plotLeft + barXPadding;
   const chartRight = plotRight - barXPadding;
+  const chartWidth = chartRight - chartLeft;
+  const xTimeRange = timeExtent([bars, line]);
 
-  // X-axis labels (take from the longer series).
+  // X-axis labels use the shared time domain, so missing months stay aligned.
   const longest = bars.points.length >= line.points.length ? bars : line;
   const maxXLabels = Math.min(7, Math.max(2, Math.floor((chartRight - chartLeft) / 70)));
-  const xLabelIndices = pickLabelIndices(longest.points.length, maxXLabels);
-  const xLabels = xLabelIndices
-    .map((i) => {
-      const point = longest.points[i];
-      if (!point) return "";
-      const x = xPosition(i, longest.points.length, chartLeft, chartRight);
-      return `<text x="${x}" y="${plotBottom + 16}" text-anchor="middle" font-size="10" fill="#94A3B8">${escapeAttribute(shortenLabel(point.label))}</text>`;
-    })
-    .join("");
+  const xLabels = xTimeRange
+    ? renderTemporalAxisLabels(
+        xTimeRange,
+        maxXLabels,
+        chartLeft,
+        chartRight,
+        plotBottom + 18,
+      )
+    : pickLabelIndices(longest.points.length, maxXLabels)
+        .map((index, position, indices) => {
+          const point = longest.points[index];
+          if (!point) return "";
+          const x = xPosition(index, longest.points.length, chartLeft, chartRight);
+          const anchor = position === 0 ? "start" : position === indices.length - 1 ? "end" : "middle";
+          return `<text data-axis="x" x="${x}" y="${plotBottom + 18}" text-anchor="${anchor}" font-size="12" fill="#596579">${escapeAttribute(shortenLabel(point.label))}</text>`;
+        })
+        .join("");
 
   // Bars: scale to bar-axis (zero baseline).
   const barElements = bars.points
@@ -626,13 +984,27 @@ export function renderDualAxisChart(
       if (point.value === null) {
         return "";
       }
-      const x = xPosition(index, bars.points.length, chartLeft, chartRight) - barWidth / 2;
+      const barWidth = projectedBarWidth(
+        point,
+        xTimeRange,
+        chartWidth,
+        fallbackBarWidth,
+      );
+      const xCenter = temporalXPosition(
+        point,
+        index,
+        bars.points.length,
+        chartLeft,
+        chartRight,
+        xTimeRange,
+      );
+      const x = xCenter - barWidth / 2;
       const heightRatio = barAxisTop > 0 ? point.value / barAxisTop : 0;
       const height = Math.max(heightRatio * (plotBottom - plotTop), 0.5);
       const y = plotBottom - height;
-      const unitSuffix = bars.unit ? ` ${bars.unit.trim()}` : "";
+      const unitSuffix = formatUnitSuffix(bars.unit, point.value);
       const title = `${bars.label} ${point.label}: ${formatTooltipValue(point.value)}${unitSuffix}`;
-      return `<g><title>${escapeAttribute(title)}</title><rect x="${x}" y="${y}" width="${barWidth}" height="${height}" rx="3" fill="${escapeAttribute(colors.bar)}" opacity="0.75" /></g>`;
+      return `<g><title>${escapeAttribute(title)}</title><rect data-chart-bar="true" x="${x}" y="${y}" width="${barWidth}" height="${height}" rx="${Math.min(3, barWidth / 2)}" fill="${escapeAttribute(colors.bar)}" opacity="0.75" /></g>`;
     })
     .join("");
 
@@ -640,22 +1012,37 @@ export function renderDualAxisChart(
   const segments: string[] = [];
   let current = "";
   const dots: string[] = [];
+  const visibleMarkers = visibleMarkerIndices(line, chartLeft, chartRight, xTimeRange);
+  let previousPoint: ChartPoint | null = null;
   line.points.forEach((point, index) => {
-    if (point.value === null) {
+    if (point.value === null || !Number.isFinite(point.value)) {
       if (current) {
         segments.push(current);
         current = "";
       }
+      previousPoint = null;
       return;
     }
-    const x = xPosition(index, line.points.length, chartLeft, chartRight);
+    if (previousPoint && hasLargeTemporalGap(previousPoint, point) && current) {
+      segments.push(current);
+      current = "";
+    }
+    const x = temporalXPosition(
+      point,
+      index,
+      line.points.length,
+      chartLeft,
+      chartRight,
+      xTimeRange,
+    );
     const y = yPosition(point.value, lineAxisMin, lineAxisMax, plotTop, plotBottom);
     current += `${current ? " L" : "M"} ${x} ${y}`;
-    const unitSuffix = line.unit ? ` ${line.unit.trim()}` : "";
+    const unitSuffix = formatUnitSuffix(line.unit, point.value);
     const title = `${line.label} ${point.label}: ${formatTooltipValue(point.value)}${unitSuffix}`;
-    dots.push(
-      `<circle cx="${x}" cy="${y}" r="3" fill="${escapeAttribute(colors.line)}" stroke="#fff" stroke-width="1.5"><title>${escapeAttribute(title)}</title></circle>`,
-    );
+    dots.push(visibleMarkers.has(index)
+      ? `<circle data-marker="visible" cx="${x}" cy="${y}" r="2.6" fill="${escapeAttribute(colors.line)}" stroke="#fff" stroke-width="1.25"><title>${escapeAttribute(title)}</title></circle>`
+      : `<circle data-marker="hit" cx="${x}" cy="${y}" r="4" fill="transparent" stroke="none"><title>${escapeAttribute(title)}</title></circle>`);
+    previousPoint = point;
   });
   if (current) segments.push(current);
   const linePath = segments
@@ -665,8 +1052,8 @@ export function renderDualAxisChart(
     )
     .join("");
 
-  const ariaLabel = t ? t.lineChartAriaLabel : "Trend chart";
-  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  return `<svg viewBox="0 0 ${size.width} ${size.height}" role="img" tabindex="0" aria-label="${escapeAttribute(ariaLabel)}" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <desc>${escapeAttribute(ariaDescription)}</desc>
   ${gridAndLeftLabels}
   ${xLabels}
   ${barElements}

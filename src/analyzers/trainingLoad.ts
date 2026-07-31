@@ -8,6 +8,8 @@ export const ATL_DAYS = 7;
 export const CTL_DAYS = 42;
 export const ATL_ALPHA = 2 / (ATL_DAYS + 1); // ≈ 0.25
 export const CTL_ALPHA = 2 / (CTL_DAYS + 1); // ≈ 0.0465
+export const MIN_LOAD_STATUS_DAYS = 28;
+export const MIN_LOAD_STATUS_WORKOUTS = 6;
 
 /**
  * Fallback METs per Apple HealthKit workout type, aligned with the
@@ -161,6 +163,24 @@ export function computeTrainingLoadSeries(
     lookup90d && lookup90d.ctl > 0 ? round(((latest.ctl - lookup90d.ctl) / lookup90d.ctl) * 100) : null;
 
   const daysWithAnyLoad = dailyWithMetrics.filter((entry) => entry.load > 0).length;
+  const loadBearingWorkoutCount = workouts.filter((workout) => {
+    const workoutDay = toUtcDayStart(workout.startDate);
+    return (
+      workoutDay >= toUtcDayStart(windowStart) &&
+      workoutDay <= toUtcDayStart(windowEnd) &&
+      estimateWorkoutTLoad(workout) !== null
+    );
+  }).length;
+
+  // Keep the daily curve available for transparent inspection, but do not
+  // publish a "current" load snapshot until there is enough history and
+  // enough actual training to make the EWMA comparison meaningful.
+  if (
+    dailyWithMetrics.length < MIN_LOAD_STATUS_DAYS ||
+    loadBearingWorkoutCount < MIN_LOAD_STATUS_WORKOUTS
+  ) {
+    return { daily: dailyWithMetrics, status: null };
+  }
 
   const status: TrainingLoadStatus = {
     ctl: latest.ctl,

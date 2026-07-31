@@ -6,10 +6,6 @@ export const recoveryEn: RecoveryT = {
   partEnd: ".",
   sentSep: ". ",
 
-  // ── Direction words ──
-  directionLow: "low",
-  directionHigh: "high",
-
   // ── analyzeRecovery ──
   activeNote: "Recovery metrics are reported per their primary data source and are not merged across devices.",
   noDataNote: "No recovery metrics available in the selected time window.",
@@ -17,80 +13,64 @@ export const recoveryEn: RecoveryT = {
   // ── buildSpo2Assessment ──
   spo2NoData: "No blood oxygen data available.",
   spo2Normal: (avg) =>
-    `Recent average SpO2 ${avg}%, within the normal range (>=95%). This indicates normal pulmonary gas exchange function.`,
+    `Recent device-recorded average SpO2 is ${avg}%. A consumer-device reading cannot confirm lung function or rule out disease; the repeated trend is more useful than one reading.`,
   spo2Low: (avg) =>
-    `Recent average SpO2 ${avg}%, at a low level (normal >=95%). Intermittent low oxygen saturation may be related to sleep apnea, high-altitude environments, or respiratory issues. Continued monitoring is recommended, especially if accompanied by daytime drowsiness or morning headaches.`,
+    `Recent device-recorded average SpO2 is ${avg}%, below a common reference range. First check fit, environment, and measurement conditions; seek medical advice if readings repeat or symptoms occur.`,
   spo2Critical: (avg) =>
-    `Recent average SpO2 ${avg}%, below the clinical concern threshold (93%). Persistently low oxygen saturation may indicate respiratory problems, cardiopulmonary dysfunction, or sleep apnea. Prompt medical consultation is recommended.`,
+    `Recent device-recorded average SpO2 is ${avg}%, and repeated low readings merit prompt confirmation. The device is not diagnostic; contact a clinician if repeat readings remain low or symptoms are present.`,
 
   // ── buildNormalRangeAssessment ──
-  rhrExcellent: (avg) =>
-    `Resting heart rate ${avg} bpm, in the excellent range for active individuals (40-60 bpm)`,
-  rhrNormal: (avg) =>
-    `Resting heart rate ${avg} bpm, within the normal range (60-100 bpm)`,
-  rhrHigh: (avg) =>
-    `Resting heart rate ${avg} bpm, above the normal upper limit (100 bpm); may be related to stress, dehydration, caffeine, or thyroid issues`,
-  rhrLow: (avg) =>
-    `Resting heart rate ${avg} bpm, on the low side; if you do not have a long-term exercise habit, cardiac conduction evaluation may be warranted`,
+  rhrObserved: (avg, delta) =>
+    `Resting heart rate averaged ${avg} bpm over the last 30 days${delta === null ? ", with insufficient baseline samples" : `, ${delta > 0 ? "+" : ""}${delta} bpm versus the personal baseline`}; interpret it primarily through personal trends, symptoms, and measurement conditions`,
 
   hrvNote: (avg) =>
     `HRV average ${avg} ms - HRV varies greatly between individuals, so absolute values have limited reference value; trend changes are more important to monitor`,
 
   spo2InRangeNormal: (avg) =>
-    `SpO2 ${avg}%, normal`,
+    `Device-recorded SpO2 ${avg}%, within a common reference range; a consumer device is not diagnostic`,
   spo2InRangeLow: (avg) =>
-    `SpO2 ${avg}%, low (normal >=95%); warrants attention`,
+    `Device-recorded SpO2 ${avg}%, below a common reference value (>=95%); confirm measurement conditions and seek advice if it repeats or symptoms occur`,
 
-  rrNormal: (avg) =>
-    `Respiratory rate ${avg} breaths/min, normal`,
-  rrLow: (avg) =>
-    `Respiratory rate ${avg} breaths/min, low (normal 12-20)`,
-  rrHigh: (avg) =>
-    `Respiratory rate ${avg} breaths/min, high (normal 12-20)`,
+  rrObserved: (avg, delta) =>
+    `Device-recorded respiratory rate averaged ${avg} breaths/min${delta === null ? ", with insufficient baseline samples" : `, ${delta > 0 ? "+" : ""}${delta} breaths/min versus the personal baseline`}; the export does not establish measurement context, so this report does not assign a universal resting category`,
 
   vo2Good: (avg) =>
-    `VO2 Max ${avg} mL/min·kg, good cardiorespiratory fitness`,
+    `VO2 Max ${avg} mL/kg/min; interpret with age, sex, device context, and personal trend`,
   vo2Moderate: (avg) =>
-    `VO2 Max ${avg} mL/min·kg, moderate cardiorespiratory fitness with room for improvement`,
+    `VO2 Max ${avg} mL/kg/min; this report lacks reliable age- and sex-specific context, so it does not assign a high/low category`,
   vo2Low: (avg) =>
-    `VO2 Max ${avg} mL/min·kg, low cardiorespiratory fitness; gradual increase in aerobic exercise is recommended`,
+    `VO2 Max ${avg} mL/kg/min; interpret with age, sex, device context, and personal trend`,
 
   normalRangeInsufficientData: "Insufficient recovery metric data for assessment.",
 
   // ── buildInterpretation ──
   interpretationInsufficientData: "Not enough records to provide a comprehensive interpretation.",
 
-  coherencePositive: "Recovery metrics show a positive trend: resting heart rate declining + HRV rising, a classic signal of good autonomic nervous system recovery and increasing physical adaptability",
-  coherenceNegative: "Recovery metrics are simultaneously weakening: resting heart rate rising + HRV declining, a signal of significant bodily stress that may be related to overtraining, sleep deprivation, mental stress, or fighting an infection",
+  coherencePositive: "Resting heart rate is lower while HRV is higher, which is directionally consistent with improved recent recovery signals; interpret alongside how you feel and your personal baseline",
+  coherenceNegative: "Resting heart rate is higher while HRV is lower, which is directionally consistent with greater recent strain or reduced recovery, but device data alone cannot identify the cause",
   coherencePartialDecline: "Recovery metrics show partial deterioration signals. Consider evaluating in conjunction with recent sleep quality and training intensity",
   coherenceStable: "Recovery metrics remain stable with no significant trending changes",
   coherenceAccumulating: "Recovery metrics are available; baseline data is still accumulating and trend assessments will become more reliable over time",
 
   spo2LowContext: (avg) =>
-    `Low SpO2 (${avg}%) warrants attention, especially if accompanied by daytime drowsiness or morning headaches - sleep apnea screening should be considered`,
-
-  rhrHighContext: "Resting heart rate is elevated. If recent exercise and caffeine intake have been ruled out, evaluation for hyperthyroidism or anemia may be warranted",
+    `Device-recorded average SpO2 is ${avg}%. Check fit and measurement conditions first; seek medical advice if low readings repeat or symptoms occur`,
 
   // ── buildActionableAdvice ──
-  adviceBothWorsening: "Recovery metrics are simultaneously weakening. Consider reducing training intensity for the next 1-2 weeks and prioritize sleep and stress management.",
+  adviceBothWorsening: "Recovery metrics are simultaneously weakening. Use fatigue, pain, and the training plan to decide whether to reduce intensity temporarily or add recovery, then watch the subsequent trend.",
   adviceRhrWorsening: "Resting heart rate is trending upward. Check whether stress has increased, sleep has worsened, or training has been excessive recently, and ensure adequate recovery time.",
-  adviceHrvWorsening: "HRV is trending downward, an early signal of declining recovery capacity. Schedule more recovery days and try meditation or deep breathing exercises (5-10 minutes daily).",
-  adviceSpo2Low: "SpO2 is low. Watch for symptoms of sleep apnea such as snoring or nighttime awakenings, and consider polysomnography if needed.",
-  adviceRhrHigh: "Resting heart rate is elevated. Regular aerobic exercise (e.g., brisk walking, swimming, 3-5 times per week, 30 minutes each) can effectively lower resting heart rate.",
-  adviceVo2Low: "VO2 Max is low. Start with low-intensity aerobic exercise and gradually increase volume to improve cardiorespiratory fitness.",
-  adviceGood: "Your recovery metrics are looking good overall. Keep up your current exercise routine and lifestyle rhythm.",
+  adviceHrvWorsening: "HRV is trending downward. First review sleep, training load, alcohol, stress, and measurement conditions, then use subsequent trends to interpret it.",
+  adviceSpo2Low: "For low device SpO2 readings, first confirm fit and environmental conditions; consult a clinician if they repeat or occur with shortness of breath, chest pain, or other symptoms.",
+  adviceVo2Low: "Interpret VO2 Max by age, sex, device context, and personal trend rather than using one fixed threshold to change training.",
+  adviceGood: "Current recovery metrics are relatively stable. Whether to maintain the current exercise plan should also depend on fatigue, pain, and training goals.",
   adviceConsistentMeasurement: "Measure at the same time each day (e.g., right after waking) to make trend comparisons more reliable.",
 
   // ── buildDoctorTalkingPoints ──
   doctorRhrHigh: (avg) =>
-    `"My resting heart rate has recently averaged ${avg} bpm, which is elevated. Should I get a thyroid check or an ECG?"`,
+    `"My device recently recorded an average resting heart rate of ${avg} bpm. If that persists or occurs with symptoms, do my history and symptoms warrant further evaluation?"`,
   doctorRhrRising: (delta) =>
     `"My resting heart rate has risen by ${delta} bpm recently. Is this change something to be concerned about?"`,
   doctorSpo2Low: (avg) =>
-    `"My SpO2 averages ${avg}%, which is low. Should I be screened for sleep apnea or get a pulmonary function test?"`,
+    `"My device has repeatedly recorded average SpO2 around ${avg}%. How should I confirm the readings, and do my symptoms warrant further evaluation?"`,
   doctorHrvDrop: (delta) =>
-    `"My HRV has dropped by ${delta} ms recently. Could this reflect changes in autonomic nervous system function?"`,
-  doctorRrAbnormal: (avg, direction) =>
-    `"My respiratory rate averages ${avg} breaths/min, which is ${direction}. Should I get further evaluation?"`,
-  doctorNormal: `"My recovery metrics look generally normal. Are there any preventive cardiovascular screenings you'd recommend?"`,
+    `"My device-recorded HRV has dropped by ${delta} ms recently. Given my other metrics and symptoms, is this change relevant?"`,
 };

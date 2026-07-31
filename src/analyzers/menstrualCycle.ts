@@ -12,6 +12,7 @@ import type {
 import type { MenstrualCycleT } from "../i18n/zh/menstrualCycle.js";
 
 import { round } from "./mathUtils.js";
+import { isWithinWindow } from "../normalize/buildTimeWindow.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -124,6 +125,13 @@ export function analyzeMenstrualCycle(
   t: MenstrualCycleT,
 ): { result: MenstrualCycleAnalysis; warnings: WarningMessage[] } {
   const warnings: WarningMessage[] = [];
+  flowSamples = flowSamples.filter((sample) => isWithinWindow(sample.startDate, window));
+  intermenstrualSamples = intermenstrualSamples.filter((sample) =>
+    isWithinWindow(sample.startDate, window),
+  );
+  contraceptiveSamples = contraceptiveSamples.filter((sample) =>
+    isWithinWindow(sample.startDate, window),
+  );
 
   if (flowSamples.length === 0) {
     return {
@@ -546,10 +554,6 @@ function buildDoctorTalkingPoints(
 
   if (periodDurationTrend === "lengthening") {
     points.push(t.doctorPeriodLengthening);
-  }
-
-  if (points.length === 0) {
-    points.push(t.doctorAllNormal);
   }
 
   return points;

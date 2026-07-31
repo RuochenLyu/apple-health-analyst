@@ -17,26 +17,30 @@ export const crossMetricEn: CrossMetricT = {
     shortHRV: number,
     normalHRV: number,
   ) =>
-    `On the ${shortDays} night(s) with less than 6 hours of sleep, next-day HRV dropped by an average of ${Math.abs(hrvDrop)}% (${shortHRV} vs ${normalHRV} ms), indicating a clear impact of short sleep on autonomic recovery.`,
+    `Across ${shortDays} ${shortDays === 1 ? "night" : "nights"} with less than 6 hours of sleep, next-day mean HRV was ${Math.abs(hrvDrop)}% lower than after normal sleep (${shortHRV} vs ${normalHRV} ms). This is an association in the available sample, not evidence of causation.`,
 
-  sleepRecoveryNoHrvData: (shortDays: number) =>
-    `${shortDays} night(s) had less than 6 hours of sleep, but there is insufficient next-day HRV data to assess recovery impact.`,
+  sleepRecoveryNoHrvData: (
+    shortDays: number,
+    shortPairedDays: number,
+    normalPairedDays: number,
+  ) =>
+    `${shortDays} ${shortDays === 1 ? "night" : "nights"} had less than 6 hours of sleep, but only ${shortPairedDays}/${normalPairedDays} next-day HRV pairs were available after short/normal sleep. That is not enough to assess a stable association.`,
 
   sleepRecoveryTolerable: (shortDays: number) =>
-    `${shortDays} night(s) had less than 6 hours of sleep, but next-day HRV did not show a significant decline, suggesting reasonable tolerance to short sleep.`,
+    `${shortDays} ${shortDays === 1 ? "night" : "nights"} had less than 6 hours of sleep; the paired sample did not show a consistent next-day HRV decline above 5%. This does not mean short sleep had no effect.`,
 
   // ── Sleep Consistency ────────────────────────────────────────────
 
   sleepConsistencyInsufficient: "Insufficient data to assess sleep schedule regularity.",
 
   sleepConsistencyHigh: (bedStd: number, wakeStd: number) =>
-    `Bedtime standard deviation is approximately ${bedStd} minutes, and wake time standard deviation is approximately ${wakeStd} minutes — your sleep schedule is very consistent. Research shows that a regular sleep schedule contributes more to health than simply extending sleep duration.`,
+    `Bedtime standard deviation is approximately ${bedStd} minutes and wake-time standard deviation is approximately ${wakeStd} minutes; the recorded schedule is relatively consistent.`,
 
   sleepConsistencyModerate: (bedStd: number, wakeStd: number) =>
     `Bedtime standard deviation is approximately ${bedStd} minutes, and wake time standard deviation is approximately ${wakeStd} minutes — your schedule shows moderate variability. Prioritizing a fixed wake time is recommended; bedtime will naturally stabilize.`,
 
   sleepConsistencyLow: (bedStd: number, wakeStd: number) =>
-    `Bedtime standard deviation is approximately ${bedStd} minutes, and wake time standard deviation is approximately ${wakeStd} minutes — your sleep schedule has high variability. An irregular schedule weakens the circadian rhythm, reducing deep sleep quality and disrupting hormonal regulation.`,
+    `Bedtime standard deviation is approximately ${bedStd} minutes and wake-time standard deviation is approximately ${wakeStd} minutes; the recorded schedule is highly variable. Interpret this with total sleep and daytime function before deciding whether to adjust it.`,
 
   // ── Activity-Recovery Balance ────────────────────────────────────
 
@@ -44,21 +48,21 @@ export const crossMetricEn: CrossMetricT = {
     "No high-activity days (\u226560 minutes) recently; unable to assess training-recovery balance.",
 
   activityRecoveryInsufficientHrv: (highStrainDays: number) =>
-    `${highStrainDays} day(s) had high activity levels, but there is insufficient HRV data to assess recovery adequacy.`,
+    `${highStrainDays} ${highStrainDays === 1 ? "day" : "days"} had high activity levels, but there is insufficient HRV data to assess recovery adequacy.`,
 
   activityRecoveryAdequate: (
     highStrainDays: number,
     highHRV: number,
     restHRV: number,
   ) =>
-    `${highStrainDays} day(s) had high activity levels, with next-day average HRV of ${highHRV} ms close to the rest-day average of ${restHRV} ms, indicating good recovery from the current training load.`,
+    `${highStrainDays} ${highStrainDays === 1 ? "day" : "days"} had high activity levels. In the paired sample, next-day mean HRV was ${highHRV} ms versus ${restHRV} ms after low-activity days, with no consistent association with poorer recovery observed.`,
 
   activityRecoveryInadequate: (
     highStrainDays: number,
     highHRV: number,
     restHRV: number,
   ) =>
-    `${highStrainDays} day(s) had high activity levels, with next-day average HRV of ${highHRV} ms significantly lower than the rest-day average of ${restHRV} ms, suggesting the training load may exceed recovery capacity. Consider reducing intensity or adding more rest days.`,
+    `${highStrainDays} ${highStrainDays === 1 ? "day" : "days"} had high activity levels. In the paired sample, next-day mean HRV was ${highHRV} ms versus ${restHRV} ms after low-activity days. The two may be associated, but this does not establish causation; use subjective fatigue and subsequent trends when considering a training adjustment.`,
 
   // ── Recovery Coherence ───────────────────────────────────────────
 
@@ -68,10 +72,10 @@ export const crossMetricEn: CrossMetricT = {
     rhrTrend: string,
     hrvTrend: string,
   ) =>
-    `Resting heart rate is ${rhrTrend === "improving" ? "declining" : "stable"} and HRV is ${hrvTrend === "improving" ? "rising" : "stable"} — both recovery indicators are aligned, reflecting a healthy sympathetic/parasympathetic balance.`,
+    `Resting heart rate is ${rhrTrend === "improving" ? "declining" : "stable"} and HRV is ${hrvTrend === "improving" ? "rising" : "stable"}; the two personal recovery indicators are directionally aligned, not a clinical assessment of autonomic balance.`,
 
   recoveryCoherenceBothWorsening:
-    "Resting heart rate is rising and HRV is declining — dual signals suggesting reduced autonomic recovery capacity. Attention to stress, sleep, and training load is recommended.",
+    "Resting heart rate is rising while HRV is declining, directionally consistent with weaker recent recovery support. Review stress, sleep, training load, and measurement conditions, but do not infer a cause from these records alone.",
 
   recoveryCoherenceMixed: (rhrTrend: string, hrvTrend: string) =>
     `Resting heart rate trend is "${rhrTrend}" and HRV trend is "${hrvTrend}" — the two indicators are not fully aligned. Consider whether mixed stressors may be at play (e.g., increased training but improved sleep).`,
@@ -102,9 +106,10 @@ export const crossMetricEn: CrossMetricT = {
 
   compositeLowAdvice: "Prioritize improving sleep and recovery before increasing training intensity.",
   compositeModerateAdvice: "There is room for improvement; focus on the dimension with the lowest score.",
-  compositeGoodAdvice: "All dimensions are in good shape; you can maintain or progressively advance your training goals.",
+  compositeGoodAdvice: "Recorded dimensions are relatively stable; maintain the current rhythm and continue checking it against how you feel.",
 
-  compositeInsufficientDimensions: "Insufficient data dimensions to generate a composite score.",
+  compositeInsufficientDimensions:
+    "This report does not generate an unvalidated composite health score; use the personal trends, sample coverage, and data gaps for each metric.",
 
   // ── Pattern Detection ────────────────────────────────────────────
 
@@ -113,16 +118,16 @@ export const crossMetricEn: CrossMetricT = {
     weekdayAvg: number,
     ratio: number,
   ) =>
-    `Weekend warrior pattern: Weekend average exercise is ${weekendAvg} minutes — ${ratio}x the weekday average of ${weekdayAvg} minutes. Concentrated exercise carries a higher injury risk than evenly distributed activity; consider adding light exercise on weekdays.`,
+    `Weekend-concentrated activity pattern: Weekend average exercise is ${weekendAvg} minutes — ${ratio}x the weekday average of ${weekdayAvg} minutes. This describes timing, not lower exercise benefit; if individual weekend sessions feel excessive, light weekday activity can distribute the load.`,
 
   patternNightOwlDrift: (driftMin: number) =>
-    `Night owl drift: Bedtime shifted later by approximately ${driftMin} minutes over the analysis period. A delayed circadian rhythm reduces deep sleep proportion and HRV; increasing morning light exposure can help anchor your rhythm.`,
+    `Later bedtime pattern: Bedtime shifted later by approximately ${driftMin} minutes over the analysis period. This describes clock-time change; if an earlier schedule is desired, try a stable wake time and morning daylight.`,
 
   patternSleepDebtCompensation: (weekdayAvg: string, weekendAvg: string) =>
-    `Sleep debt compensation pattern: Weekday average sleep is ${weekdayAvg} hours, weekend average is ${weekendAvg} hours. Weekend catch-up sleep only partially repays sleep debt and cannot fully restore cognitive function or metabolic balance. Aim for at least 7 hours on weekdays.`,
+    `Weekday/weekend sleep difference: Weekday average is ${weekdayAvg} hours and weekend average is ${weekendAvg} hours. The difference may reflect schedule constraints or catch-up sleep; first check whether weekday sleep is adequate and sustainable.`,
 
   patternRecoveryDeficit: (maxConsecutive: number) =>
-    `Recovery deficit risk: ${maxConsecutive} consecutive days of high activity (\u226545 minutes) with no rest day. Sustained high load accumulates micro-damage and suppresses HRV; schedule a light recovery day every 2\u20133 days.`,
+    `${maxConsecutive} consecutive days had high activity (\u226545 minutes) with no low-activity day. Duration alone cannot establish inadequate recovery; consider a light day if subjective fatigue, sleep, or recovery metrics also worsen.`,
 
   // ── Notable Days ─────────────────────────────────────────────────
 

@@ -9,7 +9,6 @@ import type {
 
 import {
   renderBarChart,
-  renderLineSparkline,
   renderMultiSeriesLineChart,
 } from "./chartSvg.js";
 import { BASE_CSS, HEALTH_CSS } from "./reportStyles.js";
@@ -22,9 +21,11 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function makeFmt(insufficientLabel: string) {
+function makeFmt(insufficientLabel: string, locale: string) {
   return function fmt(value: number | null, suffix = ""): string {
-    return value === null ? insufficientLabel : `${value}${suffix}`;
+    return value === null
+      ? insufficientLabel
+      : `${value.toLocaleString(locale, { maximumFractionDigits: 1 })}${suffix}`;
   };
 }
 
@@ -34,13 +35,26 @@ function makeFmtCount(locale: string) {
   };
 }
 
-function makeFmtDelta(dash: string) {
+function labeled(label: string, value: string, t: RenderT): string {
+  return t.htmlLang === "zh-CN" ? `${label}：${value}` : `${label}: ${value}`;
+}
+
+function renderParagraphs(value: string, className: string): string {
+  return value
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p class="${className}">${escapeHtml(paragraph)}</p>`)
+    .join("");
+}
+
+function makeFmtDelta(dash: string, locale: string) {
   return function fmtDelta(value: number | null, unit: string): string {
     if (value === null) {
       return dash;
     }
     const sign = value > 0 ? "+" : "";
-    return `${sign}${value} ${unit}`.trim();
+    return `${sign}${value.toLocaleString(locale, { maximumFractionDigits: 1 })} ${unit}`.trim();
   };
 }
 
@@ -74,6 +88,14 @@ function moduleConfidence(
   return insights.sourceConfidence.find((entry) => entry.module === module);
 }
 
+function moduleLabel(module: SourceConfidence["module"], t: RenderT): string {
+  if (module === "sleep") return t.sleepModuleTitle;
+  if (module === "recovery") return t.recoveryModuleTitle;
+  if (module === "activity") return t.activityModuleTitle;
+  if (module === "bodyComposition") return t.bodyModuleTitle;
+  return t.navMenstrual;
+}
+
 function renderLegend(items: Array<{ label: string; color: string }>): string {
   return `<div class="legend">${items
     .map(
@@ -83,8 +105,61 @@ function renderLegend(items: Array<{ label: string; color: string }>): string {
     .join("")}</div>`;
 }
 
+function renderGranularityNote(
+  series: ChartSeries[],
+  t: RenderT,
+  padded = false,
+): string {
+  if (!series.some((item) => item.points.length > 1)) {
+    return "";
+  }
+  return `<p class="chart-scale-note${padded ? " chart-scale-note--padded" : ""}">${escapeHtml(t.chartGranularityNote)}</p>`;
+}
+
+function renderLinePanel(
+  series: ChartSeries[],
+  colors: string[],
+  t: RenderT,
+): string {
+  if (series.length === 0) {
+    return "";
+  }
+  const panelTitle = series
+    .map((item) => `${item.label}${item.unit ? ` · ${item.unit}` : ""}`)
+    .join(" / ");
+  return `<div class="chart-panel">
+    <h3 class="chart-panel__title">${escapeHtml(panelTitle)}</h3>
+    <div class="chart-wrap">${renderMultiSeriesLineChart(series, colors, {
+      width: 640,
+      height: 190,
+    }, t)}</div>
+    ${series.length > 1 ? renderLegend(series.map((item, index) => ({
+      label: `${item.label}${item.unit ? ` (${item.unit})` : ""}`,
+      color: colors[index] ?? colors[0] ?? "#596579",
+    }))) : ""}
+  </div>`;
+}
+
+function renderBarPanel(
+  series: ChartSeries | undefined,
+  color: string,
+  t: RenderT,
+): string {
+  if (!series) {
+    return "";
+  }
+  const panelTitle = `${series.label}${series.unit ? ` · ${series.unit}` : ""}`;
+  return `<div class="chart-panel">
+    <h3 class="chart-panel__title">${escapeHtml(panelTitle)}</h3>
+    <div class="chart-wrap">${renderBarChart(series, color, {
+      width: 640,
+      height: 170,
+    }, t)}</div>
+  </div>`;
+}
+
 function renderMetricCard(label: string, value: string, accent: string, sub?: string): string {
-  return `<div class="metric-card" style="border-top:3px solid ${accent}">
+  return `<div class="metric-card" style="--metric-accent:${accent}">
     <div class="metric-card__label">${escapeHtml(label)}</div>
     <div class="metric-card__value">${escapeHtml(value)}</div>
     ${sub ? `<div class="metric-card__sub">${escapeHtml(sub)}</div>` : ""}
@@ -94,51 +169,16 @@ function renderMetricCard(label: string, value: string, accent: string, sub?: st
 function renderRecoveryRow(
   label: string,
   metric: NumericComparison | undefined,
-  color: string,
   t: RenderT,
   fmt: (value: number | null, suffix?: string) => string,
   fmtDelta: (value: number | null, unit: string) => string,
 ): string {
   if (!metric) {
     return `<tr class="ledger__row ledger__row--empty">
-      <td class="ledger__name">${escapeHtml(label)}</td>
+      <th scope="row" class="ledger__name">${escapeHtml(label)}</th>
       <td colspan="4" class="ledger__empty">${escapeHtml(t.recentSamplesInsufficient)}</td>
-      <td></td>
     </tr>`;
   }
-
-  const sparkSeries: ChartSeries = {
-    id: label,
-    label,
-    unit: metric.unit,
-    visual: "line",
-    points: [
-      {
-        start: metric.latest?.timestamp ?? new Date().toISOString(),
-        end: metric.latest?.timestamp ?? new Date().toISOString(),
-        granularity: "day",
-        label: t.sparkBaseline,
-        value: metric.baseline90d.average,
-        sampleCount: metric.baseline90d.sampleCount,
-      },
-      {
-        start: metric.latest?.timestamp ?? new Date().toISOString(),
-        end: metric.latest?.timestamp ?? new Date().toISOString(),
-        granularity: "day",
-        label: t.sparkRecent,
-        value: metric.recent30d.average,
-        sampleCount: metric.recent30d.sampleCount,
-      },
-      {
-        start: metric.latest?.timestamp ?? new Date().toISOString(),
-        end: metric.latest?.timestamp ?? new Date().toISOString(),
-        granularity: "day",
-        label: t.sparkLatest,
-        value: metric.latest?.value ?? null,
-        sampleCount: metric.latest ? 1 : 0,
-      },
-    ],
-  };
 
   const deltaClass =
     metric.delta !== null && metric.delta > 0
@@ -148,15 +188,14 @@ function renderRecoveryRow(
         : "";
 
   return `<tr class="ledger__row">
-    <td class="ledger__name">
+    <th scope="row" class="ledger__name">
       <strong>${escapeHtml(label)}</strong>
       <small>${escapeHtml(t.coverageDays(metric.coverageDays))}</small>
-    </td>
+    </th>
     <td class="ledger__val">${escapeHtml(fmt(metric.latest?.value ?? null, ` ${metric.unit}`))}</td>
     <td class="ledger__val">${escapeHtml(fmt(metric.recent30d.average, ` ${metric.unit}`))}</td>
     <td class="ledger__val">${escapeHtml(fmt(metric.baseline90d.average, ` ${metric.unit}`))}</td>
     <td class="ledger__val ${deltaClass}">${escapeHtml(fmtDelta(metric.delta, metric.unit))}</td>
-    <td class="ledger__spark">${renderLineSparkline(sparkSeries, color, { width: 120, height: 36 }, t)}</td>
   </tr>`;
 }
 
@@ -185,8 +224,13 @@ export interface RenderReportHtmlOptions {
    * training report. The skill only sets this when the training report is
    * being rendered into the same output directory — skipping it prevents a
    * dead `./training.report.html` link on single-report runs.
-   */
+  */
   includeCrossLink?: boolean;
+  /**
+   * Optional notice shown near the start of the report. Public demos use it
+   * to make the synthetic-data boundary explicit.
+   */
+  sampleNotice?: string;
 }
 
 export function renderReportHtml(
@@ -196,9 +240,10 @@ export function renderReportHtml(
   options: RenderReportHtmlOptions = {},
 ): string {
   const includeCrossLink = options.includeCrossLink === true;
-  const fmt = makeFmt(t.insufficientData);
+  const sampleNotice = options.sampleNotice?.trim();
+  const fmt = makeFmt(t.insufficientData, t.locale);
   const fmtCount = makeFmtCount(t.locale);
-  const fmtDelta = makeFmtDelta(t.dash);
+  const fmtDelta = makeFmtDelta(t.dash, t.locale);
   const confidenceLabel = makeConfidenceLabel(t);
   const sleepChart = insights.charts.find((chart) => chart.id === "sleep");
   const recoveryChart = insights.charts.find((chart) => chart.id === "recovery");
@@ -213,31 +258,23 @@ export function renderReportHtml(
   const menstrualConf = menstrualChart ? moduleConfidence(insights, "menstrualCycle") : undefined;
 
   // Charts
-  const sleepSvg = sleepChart
-    ? renderMultiSeriesLineChart(sleepChart.series, ["#6366F1", "#818CF8", "#A78BFA"], {
-        width: 700,
-        height: 220,
-      }, t)
-    : "";
+  const sleepDurationSeries =
+    sleepChart?.series.filter((series) => series.unit !== "%") ?? [];
+  const sleepStageSeries =
+    sleepChart?.series.filter((series) => series.unit === "%") ?? [];
+  const sleepPanels = [
+    renderLinePanel(sleepDurationSeries, ["#4F46E5"], t),
+    renderLinePanel(sleepStageSeries, ["#7C6EE6", "#A855B5"], t),
+  ].join("");
 
-  const activityPrimarySeries =
-    activityChart?.series.filter((s) => s.id !== "activity_workouts") ?? [];
-  const activitySvg =
-    activityPrimarySeries.length > 0
-      ? renderMultiSeriesLineChart(activityPrimarySeries, ["#F97316", "#FB923C", "#10B981"], {
-          width: 700,
-          height: 220,
-        }, t)
-      : "";
-  const workoutBars =
-    activityChart?.series.find((s) => s.id === "activity_workouts")
-      ? renderBarChart(
-          activityChart.series.find((s) => s.id === "activity_workouts")!,
-          "#F97316",
-          { width: 700, height: 120 },
-          t,
-        )
-      : "";
+  const activityPanels = (activityChart?.series ?? [])
+    .map((series, index) => {
+      const colors = ["#C2410C", "#B45309", "#047857", "#9A3412"];
+      return series.visual === "bar"
+        ? renderBarPanel(series, colors[index] ?? "#C2410C", t)
+        : renderLinePanel([series], [colors[index] ?? "#C2410C"], t);
+    })
+    .join("");
 
   // Callouts
   const sleepCallout = sectionCallout(
@@ -270,11 +307,10 @@ export function renderReportHtml(
     ? renderMultiSeriesLineChart([menstrualCycleLengthSeries], ["#EC4899"], { width: 700, height: 180 }, t)
     : "";
   const menstrualPeriodBars = menstrualPeriodDurationSeries
-    ? renderBarChart(menstrualPeriodDurationSeries, "#F472B6", { width: 700, height: 120 }, t)
+    ? renderBarChart(menstrualPeriodDurationSeries, "#BE185D", { width: 700, height: 120 }, t)
     : "";
 
-  // Cross-metric data
-  const cm = insights.crossMetric;
+  // Summary data
   const sleepVal = fmt(insights.analysis.sleep.recent30d.avgSleepHours, "h");
   const hrVal = fmt(
     insights.analysis.recovery.metrics.restingHeartRate?.recent30d.average ?? null,
@@ -282,12 +318,46 @@ export function renderReportHtml(
   );
   const riskCount = insights.riskFlags.length;
   const gapCount = insights.dataGaps.length;
+  const hasCareGuidance =
+    narrative.when_to_seek_care.length > 0 || insights.riskFlags.length > 0;
+  const rangeStart = (
+    insights.coverage.windowStart ??
+    insights.coverage.earliestSeen
+  )?.slice(0, 10) ?? t.windowStart;
+  const rangeEnd = insights.coverage.windowEnd.slice(0, 10);
+  const actionBrief = `<section id="actions" class="action-brief">
+    <div class="action-brief__heading">
+      <span class="action-brief__eyebrow">${escapeHtml(t.navActions)}</span>
+      <h2>${escapeHtml(t.actionsNext2Weeks)}</h2>
+    </div>
+    <div class="actions${hasCareGuidance ? "" : " actions--single"}">
+      <div class="actions__card">
+        <h3>${escapeHtml(t.actionsPriority)}</h3>
+        <ol>
+          ${narrative.actions_next_2_weeks.map((action) => `<li>${escapeHtml(action)}</li>`).join("")}
+        </ol>
+      </div>
+      ${hasCareGuidance ? `<div class="actions__card actions__card--warn">
+        <h3>${escapeHtml(t.actionsSeekCare)}</h3>
+        <ul>
+          ${narrative.when_to_seek_care.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+          ${insights.riskFlags.map((flag) => `<li><strong>${escapeHtml(labeled(flag.title, "", t))}</strong>${escapeHtml(flag.summary)}${flag.evidence.length > 0 ? ` <span>${escapeHtml(flag.evidence.join(" · "))}</span>` : ""}</li>`).join("")}
+        </ul>
+      </div>` : ""}
+    </div>
+    ${narrative.questions_for_doctor.length > 0 ? `<div class="actions actions--single">
+      <div class="actions__card actions__card--quiet">
+        <h3>${escapeHtml(t.actionsDoctorQuestions)}</h3>
+        <ol>${narrative.questions_for_doctor.map((question) => `<li>${escapeHtml(question)}</li>`).join("")}</ol>
+      </div>
+    </div>` : ""}
+  </section>`;
 
   return `<!doctype html>
 <html lang="${t.htmlLang}">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>${escapeHtml(t.reportTitle)}</title>
     <meta property="og:title" content="${escapeHtml(t.reportTitle)}" />
     <meta property="og:description" content="${escapeHtml(t.footerTagline)}" />
@@ -300,12 +370,14 @@ ${HEALTH_CSS}
     </style>
   </head>
   <body>
-    <nav class="topbar">
+    <a class="skip-link" href="#report-content">${escapeHtml(t.skipToContent)}</a>
+    <nav class="topbar" aria-label="${escapeHtml(t.reportSectionsLabel)}">
       <span class="topbar__title">${escapeHtml(t.reportTitle)}</span>
-      <span class="topbar__date">${escapeHtml(insights.coverage.windowStart ?? t.windowStart)} ~ ${escapeHtml(insights.coverage.windowEnd.slice(0, 10))}</span>
+      <span class="topbar__date">${escapeHtml(rangeStart)} ~ ${escapeHtml(rangeEnd)}</span>
       <div class="topbar__nav">
         <a href="#assessment">${escapeHtml(t.navAssessment)}</a>
         <a href="#insights">${escapeHtml(t.navInsights)}</a>
+        <a href="#actions">${escapeHtml(t.navActions)}</a>
         <a href="#sleep">${escapeHtml(t.navSleep)}</a>
         <a href="#recovery">${escapeHtml(t.navRecovery)}</a>
         <a href="#activity">${escapeHtml(t.navActivity)}</a>
@@ -322,7 +394,12 @@ ${HEALTH_CSS}
       </a>
     </nav>
 
-    <main>
+    <main id="report-content">
+      <header class="print-header">
+        <h1>${escapeHtml(t.reportTitle)}</h1>
+        <p>${escapeHtml(rangeStart)} ~ ${escapeHtml(rangeEnd)}</p>
+      </header>
+      ${sampleNotice ? `<aside class="sample-notice" role="note">${escapeHtml(sampleNotice)}</aside>` : ""}
       <!-- Summary Cards -->
       <section class="summary-cards">
         ${renderMetricCard(t.cardSleepAvg, sleepVal, "var(--sleep)", t.cardRecent30d)}
@@ -345,7 +422,7 @@ ${HEALTH_CSS}
       <section id="assessment" class="assessment">
         <div class="assessment__main">
           <h1>${escapeHtml(t.assessmentTitle)}</h1>
-          <p class="assessment__text">${escapeHtml(narrative.health_assessment)}</p>
+          ${renderParagraphs(narrative.health_assessment, "assessment__text")}
           ${
             insights.riskFlags.length > 0
               ? `<div class="pills" style="margin-top:16px">${insights.riskFlags
@@ -357,32 +434,11 @@ ${HEALTH_CSS}
               : ""
           }
         </div>
-        <aside class="assessment__aside">
-          ${cm.compositeAssessment.overallReadiness ? `<span class="readiness-badge readiness--${cm.compositeAssessment.overallReadiness}">${escapeHtml(t.overallStatusLabel)}${cm.compositeAssessment.overallReadiness === "good" ? escapeHtml(t.readinessGood) : cm.compositeAssessment.overallReadiness === "moderate" ? escapeHtml(t.readinessModerate) : escapeHtml(t.readinessLow)}</span>` : ""}
-          <div class="scores">
-            ${cm.compositeAssessment.sleepScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--sleep)">${cm.compositeAssessment.sleepScore}</span><span class="score-ring__label">${escapeHtml(t.scoreSleep)}</span></div>` : ""}
-            ${cm.compositeAssessment.recoveryScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--recovery)">${cm.compositeAssessment.recoveryScore}</span><span class="score-ring__label">${escapeHtml(t.scoreRecovery)}</span></div>` : ""}
-            ${cm.compositeAssessment.activityScore !== null ? `<div class="score-ring"><span class="score-ring__value" style="color:var(--activity)">${cm.compositeAssessment.activityScore}</span><span class="score-ring__label">${escapeHtml(t.scoreActivity)}</span></div>` : ""}
-          </div>
-        </aside>
       </section>
 
-      <!-- Cross-Metric Insights -->
-      <section id="insights" class="insights-section">
-        <h2>${escapeHtml(t.insightsSectionTitle)}</h2>
-        <div class="insight-grid">
-          <div>
-            <h3 class="insight-grid__title">${escapeHtml(t.crossMetricTitle)}</h3>
-            ${narrative.cross_metric_insights.map((item) => `<div class="insight-card"><p>${escapeHtml(item)}</p></div>`).join("")}
-          </div>
-          <div>
-            <h3 class="insight-grid__title">${escapeHtml(t.behavioralPatternsTitle)}</h3>
-            ${narrative.behavioral_patterns.map((item) => `<div class="insight-card"><p>${escapeHtml(item)}</p></div>`).join("")}
-          </div>
-        </div>
-      </section>
+      ${actionBrief}
 
-      <!-- Findings & Actions -->
+      <!-- Findings -->
       <section class="overview">
         <h2 class="overview__title">${escapeHtml(t.overviewTitle)}</h2>
         <p class="overview__text">${escapeHtml(narrative.overview)}</p>
@@ -391,6 +447,16 @@ ${HEALTH_CSS}
           <ol>
             ${narrative.key_findings.slice(0, 5).map((f) => `<li>${escapeHtml(f)}</li>`).join("")}
           </ol>
+        </div>
+        <div class="brief-columns">
+          <div>
+            <h3>${escapeHtml(t.strengthsTitle)}</h3>
+            <ul>${narrative.strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </div>
+          <div>
+            <h3>${escapeHtml(t.watchoutsTitle)}</h3>
+            <ul>${narrative.watchouts.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </div>
         </div>
         ${
           insights.dataGaps.length > 0
@@ -405,6 +471,24 @@ ${HEALTH_CSS}
         }
       </section>
 
+      <!-- Supporting Cross-Metric Evidence -->
+      <details id="insights" class="insights-section evidence-details">
+        <summary>${escapeHtml(t.evidenceDetailsTitle)}</summary>
+        <div class="evidence-details__body">
+          <h2>${escapeHtml(t.insightsSectionTitle)}</h2>
+          <div class="insight-grid">
+            <div>
+              <h3 class="insight-grid__title">${escapeHtml(t.crossMetricTitle)}</h3>
+              ${narrative.cross_metric_insights.map((item) => `<div class="insight-card"><p>${escapeHtml(item)}</p></div>`).join("")}
+            </div>
+            <div>
+              <h3 class="insight-grid__title">${escapeHtml(t.behavioralPatternsTitle)}</h3>
+              ${narrative.behavioral_patterns.map((item) => `<div class="insight-card"><p>${escapeHtml(item)}</p></div>`).join("")}
+            </div>
+          </div>
+        </div>
+      </details>
+
       <!-- 01 Sleep -->
       <section id="sleep" class="module module--sleep">
         <div class="module__header">
@@ -415,14 +499,8 @@ ${HEALTH_CSS}
         <div class="module__body">
           <div class="module__chart">
             <p class="section-intro">${escapeHtml(insights.analysis.sleep.healthInsights.interpretation || sleepCallout)}</p>
-            <div class="chart-wrap">
-              ${sleepSvg}
-              ${renderLegend([
-                { label: t.legendSleepDuration, color: "#6366F1" },
-                { label: t.legendDeepPct, color: "#818CF8" },
-                { label: t.legendRemPct, color: "#A78BFA" },
-              ])}
-            </div>
+            ${renderGranularityNote(sleepChart?.series ?? [], t)}
+            <div class="chart-panel-grid">${sleepPanels}</div>
             ${insights.analysis.sleep.healthInsights.normalRangeAssessment ? `
             <div class="note-block" style="margin:14px 0;background:var(--sleep-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--sleep);margin-bottom:4px">${escapeHtml(t.normalRangeAssessment)}</h4>
@@ -473,22 +551,22 @@ ${HEALTH_CSS}
           <div class="module__chart">
             <p class="section-intro">${escapeHtml(insights.analysis.recovery.healthInsights.interpretation || recoveryCallout)}</p>
             <table class="ledger">
+              <caption class="sr-only">${escapeHtml(t.recoveryTableCaption)}</caption>
               <thead>
                 <tr>
-                  <th>${escapeHtml(t.thMetric)}</th>
-                  <th>${escapeHtml(t.thLatest)}</th>
-                  <th>${escapeHtml(t.thRecent30d)}</th>
-                  <th>${escapeHtml(t.thBaseline)}</th>
-                  <th>${escapeHtml(t.thDelta)}</th>
-                  <th>${escapeHtml(t.thTrend)}</th>
+                  <th scope="col">${escapeHtml(t.thMetric)}</th>
+                  <th scope="col">${escapeHtml(t.thLatest)}</th>
+                  <th scope="col">${escapeHtml(t.thRecent30d)}</th>
+                  <th scope="col">${escapeHtml(t.thBaseline)}</th>
+                  <th scope="col">${escapeHtml(t.thDelta)}</th>
                 </tr>
               </thead>
               <tbody>
-                ${renderRecoveryRow(t.rowRestingHr, insights.analysis.recovery.metrics.restingHeartRate, "#10B981", t, fmt, fmtDelta)}
-                ${renderRecoveryRow(t.rowHrv, insights.analysis.recovery.metrics.hrv, "#059669", t, fmt, fmtDelta)}
-                ${renderRecoveryRow(t.rowOxygen, insights.analysis.recovery.metrics.oxygenSaturation, "#0D9488", t, fmt, fmtDelta)}
-                ${renderRecoveryRow(t.rowRespiratoryRate, insights.analysis.recovery.metrics.respiratoryRate, "#14B8A6", t, fmt, fmtDelta)}
-                ${renderRecoveryRow(t.rowVo2Max, insights.analysis.recovery.metrics.vo2Max, "#6366F1", t, fmt, fmtDelta)}
+                ${renderRecoveryRow(t.rowRestingHr, insights.analysis.recovery.metrics.restingHeartRate, t, fmt, fmtDelta)}
+                ${renderRecoveryRow(t.rowHrv, insights.analysis.recovery.metrics.hrv, t, fmt, fmtDelta)}
+                ${renderRecoveryRow(t.rowOxygen, insights.analysis.recovery.metrics.oxygenSaturation, t, fmt, fmtDelta)}
+                ${renderRecoveryRow(t.rowRespiratoryRate, insights.analysis.recovery.metrics.respiratoryRate, t, fmt, fmtDelta)}
+                ${renderRecoveryRow(t.rowVo2Max, insights.analysis.recovery.metrics.vo2Max, t, fmt, fmtDelta)}
               </tbody>
             </table>
             ${insights.analysis.recovery.healthInsights.normalRangeAssessment ? `
@@ -523,14 +601,8 @@ ${HEALTH_CSS}
         <div class="module__body">
           <div class="module__chart">
             <p class="section-intro">${escapeHtml(insights.analysis.activity.healthInsights.interpretation || activityCallout)}</p>
-            <div class="chart-wrap">
-              ${activitySvg}
-              ${renderLegend([
-                { label: t.legendActivityEnergy, color: "#F97316" },
-                { label: t.legendExerciseMin, color: "#FB923C" },
-                { label: t.legendStandHours, color: "#10B981" },
-              ])}
-            </div>
+            ${renderGranularityNote(activityChart?.series ?? [], t)}
+            <div class="chart-panel-grid">${activityPanels}</div>
             <div class="activity-stats">
               <div class="activity-stats__item">
                 <span>${escapeHtml(t.activityEnergyRecent)}</span>
@@ -545,7 +617,6 @@ ${HEALTH_CSS}
                 <strong>${escapeHtml(fmt(insights.analysis.activity.recent30d.standHours, t.unitHours))}</strong>
               </div>
             </div>
-            ${workoutBars ? `<div class="chart-wrap" style="margin-top:14px">${workoutBars}</div>` : ""}
             ${insights.analysis.activity.healthInsights.normalRangeAssessment ? `
             <div class="note-block" style="margin:14px 0 0 0;background:var(--activity-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--activity);margin-bottom:4px">${escapeHtml(t.whoAssessment)}</h4>
@@ -576,6 +647,7 @@ ${HEALTH_CSS}
           ${bodyConf ? `<span class="badge ${confidenceClass(bodyConf.level)}">${escapeHtml(t.dataPrefix)}${confidenceLabel(bodyConf.level)}</span>` : ""}
         </div>
         <p class="section-intro" style="padding:16px 24px 0">${escapeHtml(bodyCallout)}</p>
+        ${renderGranularityNote(bodyChart?.series ?? [], t, true)}
         <div class="body-grid">
           ${bodyChart?.series
             .map((series, index) =>
@@ -610,7 +682,7 @@ ${HEALTH_CSS}
             </div>
             ${menstrualPeriodBars ? `<div class="chart-wrap" style="margin-top:14px">
               ${menstrualPeriodBars}
-              ${renderLegend([{ label: t.legendPeriodDuration, color: "#F472B6" }])}
+              ${renderLegend([{ label: t.legendPeriodDuration, color: "#BE185D" }])}
             </div>` : ""}
             <div class="note-block" style="margin:14px 0;background:var(--menstrual-bg);border-radius:var(--radius-sm);padding:12px 16px">
               <h4 style="color:var(--menstrual);margin-bottom:4px">${escapeHtml(t.menstrualBleedingPatternTitle)}</h4>
@@ -650,32 +722,6 @@ ${HEALTH_CSS}
       </section>`;
       })() : ""}
 
-      <!-- Actions -->
-      <div class="actions">
-        <div class="actions__card">
-          <h3>${escapeHtml(t.actionsNext2Weeks)}</h3>
-          <ol>
-            ${narrative.actions_next_2_weeks.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}
-          </ol>
-        </div>
-        <div class="actions__card actions__card--warn">
-          <h3>${escapeHtml(t.actionsSeekCare)}</h3>
-          <ul>
-            ${narrative.when_to_seek_care.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}
-          </ul>
-        </div>
-      </div>
-
-      <!-- Doctor Questions -->
-      <div class="actions actions--single">
-        <div class="actions__card">
-          <h3>${escapeHtml(t.actionsDoctorQuestions)}</h3>
-          <ol>
-            ${narrative.questions_for_doctor.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}
-          </ol>
-        </div>
-      </div>
-
       <!-- Appendix -->
       <section id="appendix" class="appendix">
         <h2 class="appendix__title">${escapeHtml(t.appendixTitle)}</h2>
@@ -693,7 +739,7 @@ ${HEALTH_CSS}
                 .map(
                   (entry) => `<li>
                     <div>
-                      <strong>${escapeHtml(entry.module)}</strong>
+                      <strong>${escapeHtml(moduleLabel(entry.module, t))}</strong>
                       <small>${escapeHtml(entry.summary)}</small>
                     </div>
                     <span class="badge ${confidenceClass(entry.level)}">${confidenceLabel(entry.level)}</span>
@@ -710,6 +756,7 @@ ${HEALTH_CSS}
     <footer class="site-footer">
       <a href="https://github.com/RuochenLyu/apple-health-analyst" class="site-footer__brand" target="_blank" rel="noopener">apple-health-analyst</a>
       <div class="site-footer__tagline">${escapeHtml(t.footerTagline)}</div>
+      <div class="site-footer__tagline">${escapeHtml(t.projectBoundary)}</div>
       <div class="site-footer__links">
         ${includeCrossLink ? `<a href="./training.report.html">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

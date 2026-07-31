@@ -1,33 +1,48 @@
 import type { RenderT } from "../i18n/zh/render.js";
 import type { InsightBundle, NarrativeReport } from "../types.js";
 
-function makeFmt(insufficientLabel: string) {
+function makeFmt(insufficientLabel: string, locale: string) {
   return function fmt(value: number | null, suffix = ""): string {
-    return value === null ? insufficientLabel : `${value}${suffix}`;
+    return value === null
+      ? insufficientLabel
+      : `${value.toLocaleString(locale, { maximumFractionDigits: 1 })}${suffix}`;
   };
 }
 
+function labeled(label: string, value: string, t: RenderT): string {
+  return t.htmlLang === "zh-CN" ? `${label}：${value}` : `${label}: ${value}`;
+}
+
+function parenthetical(value: string, t: RenderT): string {
+  return t.htmlLang === "zh-CN" ? `（${value}）` : `(${value})`;
+}
+
+function joinEvidence(values: string[], t: RenderT): string {
+  return values.join(t.htmlLang === "zh-CN" ? "；" : "; ");
+}
+
 function section(title: string, values: string[]): string {
+  if (values.length === 0) return "";
   return `## ${title}\n${values.map((value) => `- ${value}`).join("\n")}`;
 }
 
 export function renderReportMarkdown(insights: InsightBundle, narrative: NarrativeReport, t: RenderT): string {
-  const fmt = makeFmt(t.insufficientData);
+  const fmt = makeFmt(t.insufficientData, t.locale);
   const callouts = new Map(narrative.chart_callouts.map((item) => [item.chart_id, item]));
-  const cm = insights.crossMetric;
-  const scoresParts: string[] = [];
-  if (cm.compositeAssessment.sleepScore !== null) scoresParts.push(t.mdScoreSleep(cm.compositeAssessment.sleepScore));
-  if (cm.compositeAssessment.recoveryScore !== null) scoresParts.push(t.mdScoreRecovery(cm.compositeAssessment.recoveryScore));
-  if (cm.compositeAssessment.activityScore !== null) scoresParts.push(t.mdScoreActivity(cm.compositeAssessment.activityScore));
+  const signalLines = [
+    ...insights.riskFlags.map(
+      (flag) => `[${flag.severity.toUpperCase()}] ${labeled(flag.title, `${flag.summary} ${parenthetical(joinEvidence(flag.evidence, t), t)}`, t)}`,
+    ),
+    ...insights.notableChanges.map(
+      (change) => `[${change.direction}] ${labeled(change.title, `${change.summary} ${parenthetical(joinEvidence(change.evidence, t), t)}`, t)}`,
+    ),
+  ];
 
   const lines = [
     `# ${t.mdReportTitle}`,
     "",
     `## ${t.mdAssessmentTitle}`,
     narrative.health_assessment,
-    "",
-    scoresParts.length > 0 ? `**${t.mdCompositeScore}**：${scoresParts.join(" | ")}` : "",
-    cm.compositeAssessment.overallReadiness ? `**${t.mdOverallStatus}**：${cm.compositeAssessment.overallReadiness === "good" ? t.readinessGood : cm.compositeAssessment.overallReadiness === "moderate" ? t.readinessModerate : t.readinessLow}` : "",
     "",
     section(t.mdCrossMetricTitle, narrative.cross_metric_insights),
     "",
@@ -51,39 +66,33 @@ export function renderReportMarkdown(insights: InsightBundle, narrative: Narrati
     section(t.mdDataLimitations, narrative.data_limitations),
     "",
     `## ${t.mdDataRangeTitle}`,
-    `- ${t.mdExportDate}：${insights.input.exportDate ?? t.mdExportDateUnknown}`,
-    `- ${t.mdAnalysisWindow}：${insights.coverage.windowStart ?? t.windowStart} -> ${insights.coverage.windowEnd}`,
-    `- ${t.mdRecordCount}：${insights.coverage.recordCount}`,
-    `- ${t.mdWorkoutCount}：${insights.coverage.workoutCount}`,
-    `- ${t.mdActivitySummaryCount}：${insights.coverage.activitySummaryCount}`,
+    `- ${labeled(t.mdExportDate, insights.input.exportDate ?? t.mdExportDateUnknown, t)}`,
+    `- ${labeled(t.mdAnalysisWindow, `${insights.coverage.windowStart ?? t.windowStart} -> ${insights.coverage.windowEnd}`, t)}`,
+    `- ${labeled(t.mdRecordCount, `${insights.coverage.recordCount}`, t)}`,
+    `- ${labeled(t.mdWorkoutCount, `${insights.coverage.workoutCount}`, t)}`,
+    `- ${labeled(t.mdActivitySummaryCount, `${insights.coverage.activitySummaryCount}`, t)}`,
     "",
     `## ${t.mdPrimarySourcesTitle}`,
-    `- ${t.mdPrimarySleep}：${insights.primarySources.sleep ?? t.insufficientData}`,
-    `- ${t.mdPrimaryRecovery}：${Object.entries(insights.primarySources.recovery)
+    `- ${labeled(t.mdPrimarySleep, insights.primarySources.sleep ?? t.insufficientData, t)}`,
+    `- ${labeled(t.mdPrimaryRecovery, Object.entries(insights.primarySources.recovery)
       .map(([metric, source]) => `${metric}=${source}`)
-      .join(t.mdPrimarySeparator) || t.insufficientData}`,
-    `- ${t.mdPrimaryBody}：${Object.entries(insights.primarySources.bodyComposition)
+      .join(t.mdPrimarySeparator) || t.insufficientData, t)}`,
+    `- ${labeled(t.mdPrimaryBody, Object.entries(insights.primarySources.bodyComposition)
       .map(([metric, source]) => `${metric}=${source}`)
-      .join(t.mdPrimarySeparator) || t.insufficientData}`,
-    `- ${t.mdPrimaryActivity}：${insights.primarySources.activity}`,
+      .join(t.mdPrimarySeparator) || t.insufficientData, t)}`,
+    `- ${labeled(t.mdPrimaryActivity, insights.primarySources.activity, t)}`,
     "",
-    `## ${t.mdRiskSignalsTitle}`,
-    ...insights.riskFlags.map(
-      (flag) => `- [${flag.severity.toUpperCase()}] ${flag.title}：${flag.summary}（${flag.evidence.join("；")}）`,
-    ),
-    ...insights.notableChanges.map(
-      (change) => `- [${change.direction}] ${change.title}：${change.summary}（${change.evidence.join("；")}）`,
-    ),
+    section(t.mdRiskSignalsTitle, signalLines),
     "",
     `## ${t.mdChartInterpretationTitle}`,
     ...insights.charts.map((chart) => {
       const callout = callouts.get(chart.id);
       const primarySeries = chart.series[0];
       const lastValue = primarySeries?.points.at(-1)?.value ?? null;
-      return `- ${chart.title}：${callout?.summary ?? chart.subtitle} ${t.mdChartCurrentValue(fmt(
+      return `- ${labeled(chart.title, `${callout?.summary ?? chart.subtitle} ${t.mdChartCurrentValue(fmt(
         lastValue,
         primarySeries?.unit ? ` ${primarySeries.unit}` : "",
-      ))}`;
+      ))}`, t)}`;
     }),
     "",
     `## ${t.mdHistoricalTitle}`,
@@ -118,5 +127,8 @@ export function renderReportMarkdown(insights: InsightBundle, narrative: Narrati
     "",
   ];
 
-  return `${lines.join("\n")}\n`;
+  const compactLines = lines.filter(
+    (line, index) => line !== "" || index === 0 || lines[index - 1] !== "",
+  );
+  return `${compactLines.join("\n").trimEnd()}\n`;
 }

@@ -11,7 +11,9 @@ import { buildInsightBundle } from "../insights/buildInsightBundle.js";
 import { findMainXml } from "../io/findMainXml.js";
 import { readZip } from "../io/readZip.js";
 import { parseHealthExport } from "../io/streamHealthXml.js";
-import { buildTimeWindow } from "../normalize/buildTimeWindow.js";
+import { buildTimeWindow, isWithinWindow } from "../normalize/buildTimeWindow.js";
+import { deduplicateWorkouts } from "../normalize/deduplicateWorkouts.js";
+import { sourceDateKey } from "../normalize/dateUtils.js";
 import { selectPrimarySources } from "../normalize/selectPrimarySources.js";
 import {
   PACKAGE_NAME,
@@ -36,14 +38,8 @@ export interface PreparedAnalysis {
   insights: InsightBundle;
 }
 
-function formatLocalDate(date: Date | null): string | null {
-  if (!date) {
-    return null;
-  }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function formatDate(date: Date | null, offsetMinutes: number): string | null {
+  return date ? sourceDateKey(date, offsetMinutes) : null;
 }
 
 export async function prepareAnalysis(
@@ -56,16 +52,29 @@ export async function prepareAnalysis(
   const zip = await readZip(resolvedZipPath);
   const mainXmlEntry = await findMainXml(zip.files);
   const parsed = await parseHealthExport(resolvedZipPath, zip.files, mainXmlEntry);
+  const deduplicated = deduplicateWorkouts(parsed.workouts);
+  parsed.workouts = deduplicated.workouts;
+  if (parsed.dataQuality) {
+    parsed.dataQuality.deduplicatedWorkoutRecords = deduplicated.removedCount;
+  }
   const timeWindow = buildTimeWindow(
     options.from,
     options.to,
     parsed.exportDate ?? parsed.coverageEnd ?? new Date(),
+    parsed.exportTimezoneOffsetMinutes ?? 0,
   );
-  const primarySources = selectPrimarySources(parsed, timeWindow);
+  const primarySources = {
+    ...selectPrimarySources(parsed, timeWindow),
+    activity: t.activity.source,
+  };
 
   const sleepSource = primarySources.sleep?.canonicalName ?? null;
   const sleepRecords = sleepSource
-    ? parsed.records.sleep.filter((record) => record.canonicalSource === sleepSource)
+    ? parsed.records.sleep.filter(
+        (record) =>
+          record.canonicalSource === sleepSource &&
+          isWithinWindow(record.startDate, timeWindow),
+      )
     : [];
   const sleep = analyzeSleep(sleepRecords, primarySources.sleep?.displayName ?? null, timeWindow, t.sleep);
 
@@ -148,16 +157,58 @@ export async function prepareAnalysis(
       generatedAt: new Date().toISOString(),
     },
     input: {
-      zipPath: resolvedZipPath,
+      zipPath: path.basename(resolvedZipPath),
       mainXmlEntry: parsed.mainXmlEntry,
-      from: formatLocalDate(timeWindow.requestedFrom),
-      to: formatLocalDate(timeWindow.requestedTo),
+      from: formatDate(
+        timeWindow.requestedFrom,
+        timeWindow.calendarOffsetMinutes ?? 0,
+      ),
+      to: formatDate(
+        timeWindow.requestedTo,
+        timeWindow.calendarOffsetMinutes ?? 0,
+      ),
       exportDate: parsed.exportDate?.toISOString() ?? null,
       locale: parsed.locale,
     },
     coverage: overview.coverage,
     sources: overview.sources,
     warnings: [
+      ...((parsed.dataQuality?.excludedInvalidTimestampSamples ?? 0) +
+        (parsed.dataQuality?.excludedImplausibleActivitySummaries ?? 0) >
+      0
+        ? [
+            {
+              code: "timestamp_anomaly_excluded",
+              module: "overview" as const,
+              message: t.common.timestampDataQualityWarning(
+                (parsed.dataQuality?.excludedInvalidTimestampSamples ?? 0) +
+                  (parsed.dataQuality?.excludedImplausibleActivitySummaries ?? 0),
+              ),
+            },
+          ]
+        : []),
+      ...((parsed.dataQuality?.excludedUnsupportedUnitValues ?? 0) > 0
+        ? [
+            {
+              code: "unsupported_unit_excluded",
+              module: "overview" as const,
+              message: t.common.unsupportedUnitWarning(
+                parsed.dataQuality?.excludedUnsupportedUnitValues ?? 0,
+              ),
+            },
+          ]
+        : []),
+      ...((parsed.dataQuality?.deduplicatedWorkoutRecords ?? 0) > 0
+        ? [
+            {
+              code: "duplicate_workout_excluded",
+              module: "activity" as const,
+              message: t.common.duplicateWorkoutWarning(
+                parsed.dataQuality?.deduplicatedWorkoutRecords ?? 0,
+              ),
+            },
+          ]
+        : []),
       ...sleep.warnings,
       ...recovery.notes.map((msg) => ({ code: "recovery_note", module: "recovery" as const, message: msg })),
       ...activity.notes.map((msg) => ({ code: "activity_note", module: "activity" as const, message: msg })),

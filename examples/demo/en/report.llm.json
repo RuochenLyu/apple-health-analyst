@@ -1,0 +1,58 @@
+{
+  "schema_version": "3.0.0",
+  "health_assessment": "Recent records are broadly steady, with a very regular sleep schedule and HRV above its 90-day baseline. The main priority is preserving sleep opportunity while recorded activity and estimated training load ease: average sleep is 7.1 hours, 0.4 hours below baseline. Recovery metrics point in mixed directions rather than to one clear state, and sparse VO2 Max samples limit interpretation.",
+  "cross_metric_insights": [
+    "Bedtime and wake-time variation were about 8 and 9 minutes across recent nights. Fourteen normal-sleep nights had paired HRV data, but no nights under 6 hours were available, so the export cannot compare short- and normal-sleep recovery.",
+    "Resting heart rate was 60.1 bpm versus 58.6 at baseline while HRV was 47.6 ms versus 42.7. The directions are mixed, so neither metric alone establishes recovery status.",
+    "No recent day reached the analysis threshold of 60 workout minutes, so a high-activity versus recovery comparison is unavailable despite 13 recorded workouts."
+  ],
+  "behavioral_patterns": [],
+  "overview": "Protect the consistent schedule, avoid reducing sleep opportunity further, and treat the lower recorded training load as context rather than a problem to correct automatically.",
+  "key_findings": [
+    "Sleep averaged 7.1 hours, down 0.4 hours from baseline, while timing stayed highly regular; duration, not schedule variability, is the useful follow-up.",
+    "HRV rose by 4.9 ms as resting heart rate rose by 1.4 bpm; the mixed directions support continued observation rather than a single readiness judgment.",
+    "Apple Exercise Time was about 140 minutes per week and estimated training load eased; intensity is unknown, so this does not establish whether public-health guidance is met."
+  ],
+  "strengths": [
+    "Sleep and wake timing were highly consistent in the recent window.",
+    "Body mass and device-estimated body-fat percentage were close to their 90-day baselines."
+  ],
+  "watchouts": [
+    "Average sleep duration was 0.4 hours below baseline.",
+    "Only one recent VO2 Max sample was available, so its apparent change is not a reliable trend."
+  ],
+  "actions_next_2_weeks": [
+    "Keep the current wake-time anchor for 14 days and note daytime energy or sleepiness alongside the device record.",
+    "If changing training, adjust either frequency or duration first, not both, and retain comfortable lighter movement."
+  ],
+  "when_to_seek_care": [],
+  "questions_for_doctor": [],
+  "data_limitations": [
+    "One partial sleep night was excluded from recent sleep averages.",
+    "VO2 Max and several respiratory metrics are sampled too sparsely for short-window conclusions.",
+    "Apple Exercise Time is not the same as verified moderate-intensity activity, and the export does not fully establish exercise intensity."
+  ],
+  "chart_callouts": [
+    {
+      "chart_id": "sleep",
+      "title": "Sleep duration and stages",
+      "summary": "Sleep timing is regular, while average duration is modestly below the 90-day baseline."
+    },
+    {
+      "chart_id": "recovery",
+      "title": "Recovery metrics",
+      "summary": "HRV and resting heart rate moved in different directions; use the longer pattern and how you feel rather than one value."
+    },
+    {
+      "chart_id": "activity",
+      "title": "Daily activity",
+      "summary": "Daily active energy was higher but Apple Exercise Time was lower than baseline, illustrating why no single activity metric is enough."
+    },
+    {
+      "chart_id": "bodyComposition",
+      "title": "Body composition",
+      "summary": "Recent body mass and device-estimated body-fat percentage remain close to baseline."
+    }
+  ],
+  "disclaimer": "This report is for personal health-management reference only. It is not a diagnosis or treatment plan, and device-derived estimates should be interpreted with symptoms, context, and professional advice when needed."
+}

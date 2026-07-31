@@ -1,33 +1,41 @@
 import { BASELINE_DAYS, RECENT_DAYS, type TimeWindow } from "../types.js";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+import {
+  addUtcDays,
+  endOfDayAtOffset,
+  parseUtcDateOnly,
+  shiftUtcDateToOffset,
+  startOfDayAtOffset,
+} from "./dateUtils.js";
 
-function parseDateOnly(value: string | undefined): Date | null {
+function parseDateOnly(value: string | undefined, offsetMinutes: number): Date | null {
   if (!value) {
     return null;
   }
-  const candidate = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(candidate.getTime())) {
+  const candidate = parseUtcDateOnly(value);
+  if (!candidate) {
     throw new Error(`Invalid date: ${value}. Expected YYYY-MM-DD.`);
   }
-  return candidate;
-}
-
-function endOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  return shiftUtcDateToOffset(candidate, offsetMinutes);
 }
 
 function subtractDays(date: Date, days: number): Date {
-  return new Date(date.getTime() - days * DAY_MS);
+  return addUtcDays(date, -days);
 }
 
 export function buildTimeWindow(
   rawFrom: string | undefined,
   rawTo: string | undefined,
   anchorEnd: Date,
+  calendarOffsetMinutes = 0,
 ): TimeWindow {
-  const requestedFrom = parseDateOnly(rawFrom);
-  const requestedTo = rawTo ? endOfDay(parseDateOnly(rawTo) as Date) : null;
+  const requestedFrom = parseDateOnly(rawFrom, calendarOffsetMinutes);
+  const requestedTo = rawTo
+    ? endOfDayAtOffset(
+        parseDateOnly(rawTo, calendarOffsetMinutes) as Date,
+        calendarOffsetMinutes,
+      )
+    : null;
 
   if (requestedFrom && requestedTo && requestedFrom > requestedTo) {
     throw new Error("--from must be earlier than or equal to --to.");
@@ -35,7 +43,10 @@ export function buildTimeWindow(
 
   const effectiveEnd = requestedTo ?? anchorEnd;
   const effectiveStart = requestedFrom;
-  const recentStart = subtractDays(effectiveEnd, RECENT_DAYS);
+  const recentStart = subtractDays(
+    startOfDayAtOffset(effectiveEnd, calendarOffsetMinutes),
+    RECENT_DAYS - 1,
+  );
   const baselineStart = subtractDays(recentStart, BASELINE_DAYS);
 
   return {
@@ -45,6 +56,7 @@ export function buildTimeWindow(
     effectiveEnd,
     recentStart,
     baselineStart,
+    calendarOffsetMinutes,
   };
 }
 

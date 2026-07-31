@@ -11,35 +11,27 @@ export const activityEn: ActivityT = {
   activeNote: "Daily activity trends come from activity summaries; workout types are counted separately.",
   noDataNote: "No activity summaries or workout records available in the selected time window.",
 
-  whoNoData: "Insufficient exercise data to compare against WHO guidelines.",
-  whoExceeds: (weeklyMinutes) =>
-    `Weekly exercise ~${weeklyMinutes} minutes, exceeding the WHO upper recommendation of 300 minutes, yielding additional health benefits. However, high exercise volume also requires adequate recovery.`,
-  whoMeets: (weeklyMinutes) =>
-    `Weekly exercise ~${weeklyMinutes} minutes, meeting the WHO moderate-intensity aerobic standard (150-300 min/week). This level effectively reduces risk of cardiovascular disease, type 2 diabetes, and certain cancers.`,
-  whoPartial: (weeklyMinutes, gap) =>
-    `Weekly exercise ~${weeklyMinutes} minutes, below the WHO minimum of 150 min/week, but already accumulating health benefits. Adding ${gap} more minutes per week would reach the target.`,
-  whoFarBelow: (weeklyMinutes) =>
-    `Weekly exercise ~${weeklyMinutes} minutes, significantly below the WHO minimum of 150 min/week. Any exercise is better than none — starting with 10 extra minutes of brisk walking per day is a practical first step.`,
+  whoNoData: "No Apple Exercise Time records are available for weekly activity context.",
+  exerciseGuidelineContext: (weeklyMinutes) =>
+    `Apple Exercise Time extrapolates to about ${weeklyMinutes} min/week. This field does not fully establish intensity or unrecorded activity, so it cannot determine a gap to WHO guidance or generate an exercise prescription.`,
 
   varietyNone: "No workout types recorded recently.",
   varietySingle: (type) =>
     `Workout variety is limited (only ${type}). Consider mixing exercise types — e.g., cardio + strength + flexibility — for more comprehensive health benefits.`,
   varietyBalanced: (types) =>
-    `Workout variety is balanced (${types}), covering a reasonable range that supports overall fitness and reduces injury risk.`,
+    `Recent records contain multiple activity types (${types}). Variety describes the mix; it does not by itself establish balanced training or lower injury risk.`,
   varietyRich: (types, count) =>
-    `Workout variety is excellent (${types} and ${count} types total). A diverse exercise mix better develops cardiorespiratory endurance, muscular strength, and joint flexibility.`,
+    `Recent records contain ${count} activity types (${types}, among others). Interpret the mix using each type's frequency, intensity, and the person's goals.`,
 
-  exerciseMeetsWho: (dailyMin, weeklyMin) =>
-    `Daily exercise ${dailyMin} min (weekly ${weeklyMin} min), meeting WHO recommendation`,
-  exerciseBelowWho: (dailyMin, weeklyMin) =>
-    `Daily exercise ${dailyMin} min (weekly ${weeklyMin} min), below WHO 150 min/week standard`,
+  exerciseRecorded: (dailyMin, weeklyMin) =>
+    `Apple Exercise Time averages ${dailyMin} min/day (about ${weeklyMin} min/week extrapolated); it supports personal trend review but is not the same as intensity-classified activity minutes`,
 
   standMeetsGoal: (hours) =>
-    `Daily standing ${hours} hours, meeting the Apple default goal (12 hours)`,
+    `About ${hours} hours/day meet Apple's “Stand Hour” recording condition`,
   standReasonable: (hours) =>
-    `Daily standing ${hours} hours, below the 12-hour target but at a reasonable level`,
+    `About ${hours} hours/day meet Apple's “Stand Hour” condition; this is not total time spent standing`,
   standLow: (hours) =>
-    `Daily standing only ${hours} hours, sedentary time is high — consider getting up for 1-2 minutes every hour`,
+    `About ${hours} hours/day meet Apple's “Stand Hour” condition. The count is low but cannot quantify total sedentary time`,
 
   activeEnergyBurned: (kcal) =>
     `Daily active energy ${kcal} kcal`,
@@ -48,32 +40,19 @@ export const activityEn: ActivityT = {
 
   interpretationInsufficientData: "Insufficient records for a comprehensive interpretation.",
 
-  whoComplianceMet: "Your exercise volume meets the WHO recommendation, providing significant protective benefits for cardiovascular health, metabolic regulation, and mental well-being",
-  whoCompliancePartial: "While your current exercise volume hasn't reached the WHO recommendation, maintaining an active habit is an excellent starting point",
+  exerciseInterpretation: "Apple Exercise Time can support personal activity trends but cannot determine compliance with public-health guidance on its own",
 
   trendImproving: (delta) =>
-    `Recent daily exercise increased by ~${delta} minutes compared to baseline, indicating improving exercise habits`,
+    `Recent recorded daily exercise increased by ~${delta} minutes compared with baseline`,
   trendDeclining: (delta) =>
     `Recent daily exercise decreased by ~${delta} minutes compared to baseline. If unintentional, consider whether time or motivation barriers have emerged`,
   trendStable: "Exercise volume remains stable — consistency is key to long-term benefits",
 
-  sedentaryWarning: "Prolonged sedentary time, independent of exercise volume, is itself a risk factor for cardiovascular and metabolic health",
+  sedentaryWarning: "Few hours meet Apple's “Stand Hour” condition. This can prompt attention to movement breaks but does not directly measure sedentary time",
 
-  adviceWhoGap: (gap, dailyGap) =>
-    `You're ~${gap} minutes/week short of the WHO recommendation. Try adding ${dailyGap} minutes daily — e.g., post-meal walks or taking stairs instead of elevators.`,
-  adviceStandMore: "Set an hourly standing reminder and move for 1-2 minutes — breaking up sedentary time has a greater sustained metabolic impact than concentrated exercise.",
+  adviceStandMore: "Consider movement reminders during long seated or desk periods. Apple's “Stand Hour” only records whether some qualifying movement occurred in that hour.",
   adviceDeclining: "Exercise volume is trending down. Consider finding a workout partner or setting a specific exercise schedule — external accountability is more reliable than willpower.",
-  adviceCrossTrain: "Try adding one different workout type per week (e.g., add strength training if you mainly do cardio). Cross-training reduces injury risk and improves overall fitness.",
-  adviceRecovery: "Exercise volume is sufficient. Ensure adequate recovery days (at least 1-2 light or rest days per week) to prevent overtraining-related immune suppression or injury.",
-  adviceGood: "Your exercise habits are solid — keep up the regular workouts and diverse training types.",
-  adviceTrack: "Tracking each workout helps monitor progress and adjust plans. Keep using Apple Watch to automatically log exercise data.",
-
-  doctorLowActivity: (weeklyMin) =>
-    `"I currently exercise about ${weeklyMin} minutes per week. Can you suggest a safe beginner exercise program for me?"`,
-  doctorHighActivity: (weeklyMin) =>
-    `"I exercise about ${weeklyMin} minutes per week, which is quite high. What should I watch out for? Should I get periodic exercise ECGs?"`,
-  doctorSedentary: (hours) =>
-    `"My job requires prolonged sitting (daily standing only ${hours} hours). What health risks does this increase?"`,
-  doctorOptimize: (weeklyMin) =>
-    `"Given my age and current exercise volume (~${weeklyMin} min/week), do you have suggestions for a more optimal exercise mix?"`,
+  adviceCrossTrain: "If it fits your goals, try one different activity type per week, starting at low intensity and monitoring how you respond.",
+  adviceGood: "Recorded exercise rhythm is relatively stable; whether to maintain or change the mix should depend on goals, fatigue, and pain.",
+  adviceTrack: "Continue recording workouts with the device or app you already use to follow personal trends; include activity type, intensity, fatigue, and pain when interpreting them.",
 };

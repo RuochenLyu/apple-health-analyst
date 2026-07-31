@@ -245,7 +245,7 @@ describe("training insights", () => {
     expect(boxing?.trailing365d.averageHeartRateBpm).not.toBeNull();
     expect(boxing?.recoveryAfterWorkout.sampleCount).toBeGreaterThan(0);
     expect(boxing?.statusTags).toContain("load rising");
-    expect(boxing?.statusTags).toContain("recovery unsupported");
+    expect(boxing?.statusTags).toContain("recovery unknown");
 
     expect(running?.recent30d.totalDistanceKm).toBe(25);
     expect(running?.recent30d.averageHeartRateBpm).not.toBeNull();
@@ -281,6 +281,151 @@ describe("training insights", () => {
     // Cycling must be filtered out — no activity in the last 180 days,
     // < 3 in the last 365 days.
     expect(training.sports.map((sport) => sport.id)).toEqual(["walking"]);
+  });
+
+  it("does not infer strain or readiness from MET-minute balance without recovery evidence", () => {
+    const workouts = [
+      workout("HKWorkoutActivityTypeRunning", "2026-02-15T08:00:00Z", 45, { averageMETs: 8.5 }),
+      workout("HKWorkoutActivityTypeRunning", "2026-03-27T08:00:00Z", 90, { averageMETs: 10 }),
+      workout("HKWorkoutActivityTypeRunning", "2026-03-28T08:00:00Z", 90, { averageMETs: 10 }),
+      workout("HKWorkoutActivityTypeRunning", "2026-03-29T08:00:00Z", 90, { averageMETs: 10 }),
+      workout("HKWorkoutActivityTypeRunning", "2026-03-30T08:00:00Z", 90, { averageMETs: 10 }),
+      workout("HKWorkoutActivityTypeRunning", "2026-03-31T08:00:00Z", 90, { averageMETs: 10 }),
+    ];
+    const context = buildHistoricalContext();
+    context.sleep.recentVsBaseline90d.sleepHours = null;
+    context.recovery = {};
+
+    const training = buildTrainingInsights(
+      buildParsed(workouts, [], [], []),
+      buildPrimarySources(),
+      buildTimeWindow(undefined, undefined, new Date("2026-03-31T23:59:59Z")),
+      context,
+      null,
+      zhTranslations.trainingInsights,
+    );
+
+    expect(training.summary.trainingLoad).not.toBeNull();
+    expect(training.summary.trainingLoad!.tsb).toBeLessThan(-30);
+    expect(training.summary.trainingState).not.toBe("strained");
+    expect(training.summary.readiness).toBe("insufficient_data");
+  });
+
+  it("does not treat missing post-workout recovery metrics as zero-valued support", () => {
+    const workouts = [
+      workout("HKWorkoutActivityTypeWalking", "2026-01-15T08:00:00Z", 40),
+      workout("HKWorkoutActivityTypeWalking", "2026-03-01T08:00:00Z", 40),
+      workout("HKWorkoutActivityTypeWalking", "2026-03-05T08:00:00Z", 40),
+      workout("HKWorkoutActivityTypeWalking", "2026-03-10T08:00:00Z", 40),
+      workout("HKWorkoutActivityTypeWalking", "2026-03-15T08:00:00Z", 40),
+      workout("HKWorkoutActivityTypeWalking", "2026-03-20T08:00:00Z", 40),
+    ];
+    const sleep = [
+      sleepRecord("2026-03-02", 7),
+      sleepRecord("2026-03-06", 7),
+      sleepRecord("2026-03-11", 7),
+      sleepRecord("2026-03-16", 7),
+      sleepRecord("2026-03-21", 7),
+      sleepRecord("2026-03-03", 8),
+      sleepRecord("2026-03-08", 8),
+      sleepRecord("2026-03-13", 8),
+      sleepRecord("2026-03-18", 8),
+      sleepRecord("2026-03-23", 8),
+    ];
+
+    const training = buildTrainingInsights(
+      buildParsed(workouts, sleep, [], []),
+      buildPrimarySources(),
+      buildTimeWindow(undefined, undefined, new Date("2026-03-31T23:59:59Z")),
+      buildHistoricalContext(),
+      null,
+      zhTranslations.trainingInsights,
+    );
+
+    const walking = training.sports.find((sport) => sport.id === "walking");
+    expect(walking?.recoveryAfterWorkout.sampleCount).toBeGreaterThanOrEqual(3);
+    expect(walking?.recoveryAfterWorkout.nextDaySleepHoursDelta).toBe(-1);
+    expect(walking?.recoveryAfterWorkout.sleepComparatorSampleCount).toBe(5);
+    expect(walking?.recoveryAfterWorkout.nextDayHrvDelta).toBeNull();
+    expect(walking?.recoveryAfterWorkout.nextDayRestingHeartRateDelta).toBeNull();
+    expect(walking?.statusTags).toContain("recovery unknown");
+  });
+
+  it("labels one concerning and one neutral recovery signal as mixed", () => {
+    const workoutDates = ["01", "05", "10", "15", "20"];
+    const postDates = ["02", "06", "11", "16", "21"];
+    const comparatorDates = ["03", "08", "13", "18", "23"];
+    const workouts = workoutDates.map((day) =>
+      workout(
+        "HKWorkoutActivityTypeWalking",
+        `2026-03-${day}T08:00:00Z`,
+        40,
+      ),
+    );
+    const sleep = [
+      ...postDates.map((day) => sleepRecord(`2026-03-${day}`, 7)),
+      ...comparatorDates.map((day) => sleepRecord(`2026-03-${day}`, 8)),
+    ];
+    const hrv = [...postDates, ...comparatorDates].map((day) =>
+      recoverySample("hrv", `2026-03-${day}T08:00:00Z`, 50),
+    );
+
+    const training = buildTrainingInsights(
+      buildParsed(workouts, sleep, hrv, []),
+      buildPrimarySources(),
+      buildTimeWindow(
+        undefined,
+        undefined,
+        new Date("2026-03-31T23:59:59Z"),
+      ),
+      buildHistoricalContext(),
+      null,
+      zhTranslations.trainingInsights,
+    );
+
+    const walking = training.sports.find((sport) => sport.id === "walking");
+    expect(walking?.recoveryAfterWorkout.nextDaySleepHoursDelta).toBe(-1);
+    expect(walking?.recoveryAfterWorkout.nextDayHrvDelta).toBe(0);
+    expect(walking?.statusTags).toContain("recovery mixed");
+    expect(walking?.statusTags).not.toContain("recovery concern");
+  });
+
+  it("keeps monthly sport chart ranges inside the UTC analysis window", () => {
+    const parsed = buildParsed(
+      [
+        workout("HKWorkoutActivityTypeWalking", "2026-06-24T18:00:00Z", 40),
+        workout("HKWorkoutActivityTypeWalking", "2026-06-30T18:00:00Z", 40),
+      ],
+      [],
+      [],
+      [],
+    );
+    parsed.exportDate = new Date("2026-06-30T23:59:59Z");
+    parsed.coverageEnd = parsed.exportDate;
+    const window = buildTimeWindow(
+      undefined,
+      undefined,
+      new Date("2026-06-30T23:59:59Z"),
+    );
+
+    const training = buildTrainingInsights(
+      parsed,
+      buildPrimarySources(),
+      window,
+      buildHistoricalContext(),
+      null,
+      zhTranslations.trainingInsights,
+    );
+
+    const walking = training.sports.find((sport) => sport.id === "walking");
+    expect(walking?.consistency.recentMonths.at(-1)?.month).toBe("2026-06");
+    const chart = training.charts.find(
+      (entry) => entry.id === "sport_walking_trend",
+    );
+    for (const point of chart?.series.flatMap((series) => series.points) ?? []) {
+      expect(point.start <= point.end).toBe(true);
+      expect(point.end <= "2026-06-30").toBe(true);
+    }
   });
 
   it("respects the topSportCount option", () => {

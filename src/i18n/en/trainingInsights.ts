@@ -1,16 +1,16 @@
 import type { TrainingInsightsT } from "../zh/trainingInsights.js";
 
 export const trainingInsightsEn: TrainingInsightsT = {
-  trainingLoadChartTitle: "Training Load Curve (Fitness · Fatigue · Form)",
+  trainingLoadChartTitle: "Training Load Trend (42-day baseline · 7-day recent · load balance)",
   trainingLoadChartSubtitle:
-    "CTL = 42-day EWMA of daily load (fitness); ATL = 7-day EWMA (fatigue); TSB = CTL − ATL (form). Positive TSB = fresher, negative TSB = carrying fatigue.",
-  ctlSeriesLabel: "Fitness (CTL)",
-  atlSeriesLabel: "Fatigue (ATL)",
-  tsbSeriesLabel: "Form (TSB)",
-  trainingRecoveryChartTitle: "Training Load and Recovery Support Index",
+    "Load is estimated in MET-minutes: CTL is the 42-day EWMA baseline, ATL is the 7-day recent-load EWMA, and TSB = CTL − ATL. The balance compares recent with longer-term personal load; it does not independently measure fatigue or readiness.",
+  ctlSeriesLabel: "42-day Load Baseline (CTL)",
+  atlSeriesLabel: "7-day Recent Load (ATL)",
+  tsbSeriesLabel: "Load Balance (TSB)",
+  trainingRecoveryChartTitle: "Training Duration and Recovery Context Index",
   trainingRecoveryChartSubtitle:
-    "All series are converted to indices where 100 equals the 12-month average; values above 100 are above personal norm.",
-  trainingLoadIndexLabel: "Training Load Index",
+    "Each series is indexed so 100 equals its average across recorded months in the last 12 months; values above 100 are above that series' recorded personal norm.",
+  trainingLoadIndexLabel: "Training Duration Index",
   sleepSupportIndexLabel: "Sleep Support Index",
   hrvSupportIndexLabel: "HRV Support Index",
   restingHeartRateSupportIndexLabel: "Resting HR Support Index",
@@ -23,13 +23,13 @@ export const trainingInsightsEn: TrainingInsightsT = {
   chartUnitIndex: "index",
   chartUnitMetMinutes: "MET·min",
   metadataLanguage: "en",
-  outputSchemaVersion: "1.0.0",
+  outputSchemaVersion: "2.0.0",
   narrativeAudience: "general users",
   narrativeGoal:
-    "Use Apple Health workout, sleep, and recovery data to produce an English training-status report focused on sport rhythm, recovery support, and overload risk.",
+    "Use Apple Health workout, sleep, and recovery data to produce an English training-status report focused on activity rhythm, load changes, and recovery evidence.",
   narrativeBoundaries: [
     "Only cite facts from summary.json and insights.json",
-    "Prioritise training rhythm, recovery support, sport-specific status, and health risks",
+    "Prioritize training rhythm, load changes, activity-specific status, and recovery evidence",
     "You may give training-adjustment and health-management advice, but not competitive prescriptions or diagnoses",
     "Do not fabricate Garmin-style proprietary scores that Apple Health cannot robustly reproduce",
     "Use conservative follow-up or medical reminders when signals look persistently abnormal",

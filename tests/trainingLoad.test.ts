@@ -143,6 +143,9 @@ describe("computeTrainingLoadSeries", () => {
       workout("HKWorkoutActivityTypeBoxing", "2026-03-01T08:00:00Z", 60, { averageMETs: 9 }),
       workout("HKWorkoutActivityTypeBoxing", "2026-03-03T08:00:00Z", 60, { averageMETs: 9 }),
       workout("HKWorkoutActivityTypeBoxing", "2026-03-06T08:00:00Z", 60, { averageMETs: 9 }),
+      workout("HKWorkoutActivityTypeBoxing", "2026-03-07T08:00:00Z", 45, { averageMETs: 9 }),
+      workout("HKWorkoutActivityTypeBoxing", "2026-03-08T08:00:00Z", 45, { averageMETs: 9 }),
+      workout("HKWorkoutActivityTypeBoxing", "2026-03-09T08:00:00Z", 45, { averageMETs: 9 }),
     ];
     const { daily, status } = computeTrainingLoadSeries(
       workouts,
@@ -155,7 +158,7 @@ describe("computeTrainingLoadSeries", () => {
     expect(last.tsb).toBeCloseTo(last.ctl - last.atl, 1);
     expect(status?.asOfDate).toBe(last.date);
     expect(status?.warmupDays).toBe(daily.length);
-    expect(status?.activeDays).toBe(3);
+    expect(status?.activeDays).toBe(6);
   });
 
   it("returns a null status when there are no workouts in range", () => {
@@ -164,11 +167,33 @@ describe("computeTrainingLoadSeries", () => {
       new Date("2026-02-01T00:00:00Z"),
       new Date("2026-02-10T00:00:00Z"),
     );
-    // Empty workouts still yields zero-load days with EWMA = 0, so status is non-null
-    // but all metrics are zero.
     expect(daily.length).toBeGreaterThan(0);
-    expect(status?.ctl).toBe(0);
-    expect(status?.atl).toBe(0);
-    expect(status?.tsb).toBe(0);
+    expect(status).toBeNull();
+  });
+
+  it("keeps the daily curve but withholds status below minimum coverage or workout count", () => {
+    const sixWorkouts = Array.from({ length: 6 }, (_, index) =>
+      workout(
+        "HKWorkoutActivityTypeRunning",
+        `2026-03-${String(index + 1).padStart(2, "0")}T08:00:00Z`,
+        40,
+      ),
+    );
+
+    const shortCoverage = computeTrainingLoadSeries(
+      sixWorkouts,
+      new Date("2026-03-01T00:00:00Z"),
+      new Date("2026-03-20T23:59:59Z"),
+    );
+    expect(shortCoverage.daily).toHaveLength(20);
+    expect(shortCoverage.status).toBeNull();
+
+    const tooFewWorkouts = computeTrainingLoadSeries(
+      sixWorkouts.slice(0, 5),
+      new Date("2026-02-01T00:00:00Z"),
+      new Date("2026-03-20T23:59:59Z"),
+    );
+    expect(tooFewWorkouts.daily.length).toBeGreaterThanOrEqual(28);
+    expect(tooFewWorkouts.status).toBeNull();
   });
 });
