@@ -30,44 +30,50 @@ export const renderEn: RenderT = {
   bodyCalloutFallback: "Body composition is best viewed at the monthly direction level.",
 
   // ── Navigation ────────────────────────────────────────────────────
-  navAssessment: "Assessment",
+  navAssessment: "Data Summary",
   navInsights: "Insights",
+  navActions: "Actions",
   navSleep: "Sleep",
   navRecovery: "Recovery",
   navActivity: "Activity",
   navBody: "Body",
   navMenstrual: "Menstrual",
   navAppendix: "Appendix",
+  skipToContent: "Skip to report content",
+  reportSectionsLabel: "Report sections",
 
   // ── Summary cards ─────────────────────────────────────────────────
   cardSleepAvg: "Sleep Avg",
   cardRestingHr: "Resting HR",
   cardRiskSignals: "Risk Signals",
   cardRiskNeedsAttention: "Needs attention",
-  cardRiskNoAbnormal: "No abnormalities",
+  cardRiskNoAbnormal: "No rule triggered",
   cardDataGaps: "Data Gaps",
   cardDataGapsAffectsConfidence: "Affects confidence",
-  cardDataGapsCoverageGood: "Good coverage",
+  cardDataGapsCoverageGood: "No major gap found",
   cardRecent30d: "Last 30 days",
 
   // ── Assessment section ────────────────────────────────────────────
-  assessmentTitle: "Health Assessment",
-  overallStatusLabel: "Overall: ",
-  readinessGood: "Good",
-  readinessModerate: "Moderate",
-  readinessLow: "Low",
+  assessmentTitle: "Recent Data Summary",
+  overallStatusLabel: "Data signal: ",
+  readinessGood: "Relatively stable",
+  readinessModerate: "Mixed",
+  readinessLow: "Needs attention",
   scoreSleep: "Sleep",
   scoreRecovery: "Recovery",
   scoreActivity: "Activity",
 
   // ── Insights section ──────────────────────────────────────────────
-  insightsSectionTitle: "Correlation Analysis",
+  insightsSectionTitle: "Multi-Metric Patterns",
   crossMetricTitle: "Cross-Metric Findings",
-  behavioralPatternsTitle: "Behavioural Patterns",
+  behavioralPatternsTitle: "Behavioral Patterns",
+  evidenceDetailsTitle: "Explore Cross-Metric Evidence",
 
   // ── Overview / Findings ───────────────────────────────────────────
   overviewTitle: "Overview",
   keyFindings: "Key Findings",
+  strengthsTitle: "What Is Working",
+  watchoutsTitle: "Watch Closely",
 
   // ── Module headers ────────────────────────────────────────────────
   sleepModuleTitle: "Sleep",
@@ -89,8 +95,8 @@ export const renderEn: RenderT = {
   legendRemPct: "REM %",
 
   // ── Heading labels for note blocks ────────────────────────────────
-  normalRangeAssessment: "Normal Range Assessment",
-  healthAdvice: "Health Advice",
+  normalRangeAssessment: "Reference Context",
+  healthAdvice: "Practical Next Steps",
   doctorQuestions: "Questions for Your Doctor",
   sourceCoverage: "Source & Coverage",
 
@@ -101,6 +107,7 @@ export const renderEn: RenderT = {
   thBaseline: "Baseline",
   thDelta: "Change",
   thTrend: "Trend",
+  recoveryTableCaption: "Latest values, 30-day averages, 90-day baselines, and changes for recovery metrics",
 
   // ── Recovery row labels ───────────────────────────────────────────
   rowRestingHr: "Resting HR",
@@ -110,13 +117,13 @@ export const renderEn: RenderT = {
   rowVo2Max: "VO2 Max",
 
   // ── Activity section ──────────────────────────────────────────────
-  legendActivityEnergy: "Active Energy",
+  legendActivityEnergy: "Daily Active Energy",
   legendExerciseMin: "Exercise Min",
   legendStandHours: "Stand Hours",
-  activityEnergyRecent: "30-Day Active Energy",
+  activityEnergyRecent: "30-Day Daily Active Energy",
   activityExerciseRecent: "30-Day Exercise",
   activityStandRecent: "30-Day Stand",
-  whoAssessment: "WHO Benchmark Assessment",
+  whoAssessment: "Weekly Activity Context",
 
   // ── Body composition ──────────────────────────────────────────────
   bodyDataInsufficient: "Insufficient body composition data.",
@@ -135,13 +142,14 @@ export const renderEn: RenderT = {
 
   // ── Actions ───────────────────────────────────────────────────────
   actionsNext2Weeks: "Recommendations for the Next 2 Weeks",
+  actionsPriority: "Priority Actions",
   actionsSeekCare: "When to Seek Medical Attention",
   actionsDoctorQuestions: "Questions for Your Next Doctor Visit",
 
   // ── Appendix ──────────────────────────────────────────────────────
   appendixTitle: "Data Boundaries & Notes",
   appendixDataLimitations: "Data Limitations",
-  appendixSourceConfidence: "Source Confidence",
+  appendixSourceConfidence: "Data Coverage & Source Consistency",
 
   // ── Date range display ────────────────────────────────────────────
   windowStart: "Start",
@@ -150,6 +158,20 @@ export const renderEn: RenderT = {
   sparklineAriaLabel: (label: string) => `${label} sparkline`,
   barChartAriaLabel: (label: string) => `${label} bar chart`,
   lineChartAriaLabel: "Trend chart",
+  chartSeriesAriaSummary: (
+    label,
+    count,
+    firstLabel,
+    firstValue,
+    latestLabel,
+    latestValue,
+    minValue,
+    maxValue,
+  ) =>
+    `${label}: ${count} ${count === 1 ? "data point" : "data points"}; first ${firstLabel}, ${firstValue}; latest ${latestLabel}, ${latestValue}; range ${minValue} to ${maxValue}.`,
+  chartNoDataAriaSummary: "No numeric data points are available to summarize.",
+  chartGranularityNote:
+    "The x-axis uses real time and one granularity for the full span: daily within 90 days, weekly within 2 years, and monthly for longer histories, so different time scales are not crowded into one chart.",
 
   // ── Cross-report navigation ───────────────────────────────────────
   crossReportTraining: "Training Report",
@@ -157,11 +179,11 @@ export const renderEn: RenderT = {
 
   // ── Markdown-specific strings ─────────────────────────────────────
   mdReportTitle: "Apple Health Report",
-  mdAssessmentTitle: "Health Assessment",
+  mdAssessmentTitle: "Recent Data Summary",
   mdCompositeScore: "Composite Score",
   mdOverallStatus: "Overall Status",
-  mdCrossMetricTitle: "Cross-Metric Correlation Analysis",
-  mdBehavioralPatterns: "Behavioural Patterns",
+  mdCrossMetricTitle: "Cross-Metric Patterns",
+  mdBehavioralPatterns: "Behavioral Patterns",
   mdOverviewTitle: "Overview",
   mdKeyFindings: "Key Findings",
   mdStrengths: "Strengths",
@@ -208,15 +230,15 @@ export const renderEn: RenderT = {
   mdFactBody: (weight: string, fat: string) =>
     `Body composition: weight ${weight}, body fat ${fat}`,
   mdFactSleepInterpretation: "Sleep interpretation: ",
-  mdFactSleepNormalRange: "Sleep normal range: ",
+  mdFactSleepNormalRange: "Sleep reference range: ",
   mdFactRecoveryInterpretation: "Recovery interpretation: ",
-  mdFactRecoveryNormalRange: "Recovery normal range: ",
+  mdFactRecoveryNormalRange: "Recovery reference context: ",
   mdFactActivityInterpretation: "Activity interpretation: ",
-  mdFactActivityNormalRange: "Activity normal range: ",
+  mdFactActivityNormalRange: "Activity reference context: ",
   mdFactMenstrualCycle: (avg: string, period: string, total: number) =>
     `Menstrual cycle: average ${avg}, period ${period}, ${total} cycles total`,
   mdFactMenstrualInterpretation: "Menstrual cycle interpretation: ",
-  mdFactMenstrualNormalRange: "Normal range assessment: ",
+  mdFactMenstrualNormalRange: "Reference context: ",
   mdDisclaimerTitle: "Disclaimer",
 
   // ── Score labels (markdown) ───────────────────────────────────────
@@ -230,5 +252,6 @@ export const renderEn: RenderT = {
   unitDays: " days",
 
   // ── Footer ────────────────────────────────────────────────────────
-  footerTagline: "Privacy-first Apple Health analytics",
+  footerTagline: "Apple Health analysis · raw exports parsed locally",
+  projectBoundary: "Independent open-source project · not affiliated with Apple",
 };

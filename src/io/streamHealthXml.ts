@@ -17,6 +17,7 @@ import type {
 } from "../types.js";
 
 import { canonicalizeSourceName, chooseDisplayName } from "../normalize/canonicalizeSource.js";
+import { parseUtcDateOnly } from "../normalize/dateUtils.js";
 
 interface ZipEntryLike {
   path: string;
@@ -45,12 +46,7 @@ const RECORD_TYPE_MAP: Record<string, Exclude<MetricKey, "sleep"> | "sleep" | un
   HKQuantityTypeIdentifierBodyFatPercentage: "bodyFatPercentage",
 };
 
-function normalizePercent(metric: Exclude<MetricKey, "sleep">, value: number): number {
-  if ((metric === "oxygenSaturation" || metric === "bodyFatPercentage") && value <= 1) {
-    return value * 100;
-  }
-  return value;
-}
+const ACTIVITY_SUMMARY_MIN_DATE = new Date("2015-01-01T00:00:00.000Z");
 
 function parseNumeric(value: string | undefined): number | null {
   if (!value) {
@@ -70,17 +66,131 @@ function parseBooleanLike(value: string | undefined): boolean | null {
   return null;
 }
 
-function normalizeDistance(value: number, unit: string | undefined): number {
-  if (!unit || unit === "km") {
+function normalizedUnit(unit: string | undefined): string {
+  return (unit ?? "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function normalizeQuantity(
+  metric: Exclude<MetricKey, "sleep">,
+  value: number,
+  unit: string | undefined,
+): { value: number; unit: string } | null {
+  const normalized = normalizedUnit(unit);
+
+  if (metric === "bodyMass") {
+    if (normalized === "kg") return { value, unit: "kg" };
+    if (normalized === "g") return { value: value / 1000, unit: "kg" };
+    if (normalized === "lb" || normalized === "lbs") {
+      return { value: value * 0.45359237, unit: "kg" };
+    }
+    if (normalized === "oz") return { value: value * 0.028349523125, unit: "kg" };
+    if (normalized === "st" || normalized === "stone") {
+      return { value: value * 6.35029318, unit: "kg" };
+    }
+    return null;
+  }
+
+  if (metric === "oxygenSaturation" || metric === "bodyFatPercentage") {
+    if (normalized !== "%" && normalized !== "percent") {
+      return null;
+    }
+    return { value: value <= 1 ? value * 100 : value, unit: "%" };
+  }
+
+  if (metric === "restingHeartRate") {
+    return ["count/min", "bpm", "beats/min"].includes(normalized)
+      ? { value, unit: "bpm" }
+      : null;
+  }
+
+  if (metric === "respiratoryRate") {
+    return ["count/min", "breaths/min"].includes(normalized)
+      ? { value, unit: "breaths/min" }
+      : null;
+  }
+
+  if (metric === "hrv") {
+    if (normalized === "ms") return { value, unit: "ms" };
+    if (normalized === "s") return { value: value * 1000, unit: "ms" };
+    return null;
+  }
+
+  if (metric === "vo2Max") {
+    return ["ml/min·kg", "ml/kg/min", "ml/(kg*min)", "ml·kg^-1·min^-1"].includes(normalized)
+      ? { value, unit: "mL/kg/min" }
+      : null;
+  }
+
+  return null;
+}
+
+function normalizeDurationMinutes(value: number, unit: string | undefined): number | null {
+  const normalized = normalizedUnit(unit);
+  if (normalized === "min" || normalized === "minute" || normalized === "minutes") {
     return value;
   }
-  if (unit === "m") {
+  if (normalized === "s" || normalized === "sec" || normalized === "second" || normalized === "seconds") {
+    return value / 60;
+  }
+  if (normalized === "h" || normalized === "hr" || normalized === "hour" || normalized === "hours") {
+    return value * 60;
+  }
+  return null;
+}
+
+function normalizeEnergyKcal(value: number, unit: string | undefined): number | null {
+  const normalized = normalizedUnit(unit);
+  if (normalized === "kcal" || normalized === "cal") {
+    return value;
+  }
+  if (normalized === "kj") {
+    return value / 4.184;
+  }
+  if (normalized === "j") {
+    return value / 4184;
+  }
+  return null;
+}
+
+function normalizeRatePerMinute(value: number, unit: string | undefined): number | null {
+  return ["count/min", "bpm", "beats/min"].includes(normalizedUnit(unit)) ? value : null;
+}
+
+function normalizeDistance(value: number, unit: string | undefined): number | null {
+  const normalized = normalizedUnit(unit);
+  if (normalized === "km") {
+    return value;
+  }
+  if (normalized === "m") {
     return value / 1000;
   }
-  if (unit === "mi") {
+  if (normalized === "mi" || normalized === "mile" || normalized === "miles") {
     return value * 1.60934;
   }
-  return value;
+  return null;
+}
+
+function parseTimestamp(value: string | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseTimezoneOffsetMinutes(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  if (/Z$/i.test(value)) {
+    return 0;
+  }
+  const match = /([+-])(\d{2}):?(\d{2})$/.exec(value.trim());
+  if (!match) {
+    return undefined;
+  }
+  const minutes = Number(match[2]) * 60 + Number(match[3]);
+  return match[1] === "-" ? -minutes : minutes;
 }
 
 function plainAttributes(rawAttributes: Record<string, unknown>): Record<string, string> {
@@ -159,6 +269,7 @@ export async function parseHealthExport(
     locale: null,
     biologicalSex: null,
     exportDate: null,
+    exportTimezoneOffsetMinutes: undefined,
     coverageStart: null,
     coverageEnd: null,
     recordCount: 0,
@@ -181,7 +292,14 @@ export async function parseHealthExport(
     intermenstrualBleeding: [],
     contraceptive: [],
     attachments: summarizeAttachments(entries, mainXmlEntry.path),
+    dataQuality: {
+      excludedInvalidTimestampSamples: 0,
+      excludedImplausibleActivitySummaries: 0,
+      excludedUnsupportedUnitValues: 0,
+      deduplicatedWorkoutRecords: 0,
+    },
   };
+  const dataQuality = parsed.dataQuality!;
   let currentWorkout: WorkoutSample | null = null;
 
   const registerSource = (sourceName: string, kind: "record" | "workout", metric?: MetricKey) => {
@@ -233,8 +351,8 @@ export async function parseHealthExport(
       parsed.biologicalSex = sexMap[raw] ?? null;
     },
     ExportDate: (attributes) => {
-      parsed.exportDate = attributes.value ? new Date(attributes.value) : null;
-      updateCoverage(parsed.exportDate);
+      parsed.exportDate = parseTimestamp(attributes.value);
+      parsed.exportTimezoneOffsetMinutes = parseTimezoneOffsetMinutes(attributes.value);
     },
     Record: (attributes) => {
       parsed.recordCount += 1;
@@ -242,15 +360,20 @@ export async function parseHealthExport(
       const sourceName = attributes.sourceName;
       const recordType = attributes.type;
       const metric = recordType ? RECORD_TYPE_MAP[recordType] : undefined;
-      const startDate = attributes.startDate ? new Date(attributes.startDate) : null;
-      const endDate = attributes.endDate ? new Date(attributes.endDate) : startDate;
-
-      updateCoverage(startDate);
-      updateCoverage(endDate);
+      const startDate = parseTimestamp(attributes.startDate);
+      const endDate = attributes.endDate ? parseTimestamp(attributes.endDate) : startDate;
 
       if (sourceName) {
         registerSource(sourceName, "record", metric);
       }
+
+      if (!startDate || !endDate || endDate < startDate) {
+        dataQuality.excludedInvalidTimestampSamples += 1;
+        return;
+      }
+
+      updateCoverage(startDate);
+      updateCoverage(endDate);
 
       const categoryMetric = recordType ? CATEGORY_RECORD_MAP[recordType] : undefined;
       if (categoryMetric && sourceName && startDate && endDate) {
@@ -261,6 +384,10 @@ export async function parseHealthExport(
           canonicalSource,
           startDate,
           endDate,
+          startTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(attributes.startDate),
+          endTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(
+            attributes.endDate ?? attributes.startDate,
+          ),
           value: attributes.value ?? "",
         } as MenstrualFlowSample | IntermenstrualBleedingSample | ContraceptiveSample;
         parsed[categoryMetric].push(sample as never);
@@ -279,14 +406,23 @@ export async function parseHealthExport(
           canonicalSource,
           startDate,
           endDate,
+          startTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(attributes.startDate),
+          endTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(
+            attributes.endDate ?? attributes.startDate,
+          ),
           value: attributes.value ?? "",
         };
         parsed.records.sleep.push(sleepSample);
         return;
       }
 
-      const value = normalizePercent(metric, parseNumeric(attributes.value) ?? Number.NaN);
-      if (!Number.isFinite(value)) {
+      const rawValue = parseNumeric(attributes.value);
+      if (rawValue === null) {
+        return;
+      }
+      const normalized = normalizeQuantity(metric, rawValue, attributes.unit);
+      if (!normalized) {
+        dataQuality.excludedUnsupportedUnitValues += 1;
         return;
       }
 
@@ -296,8 +432,12 @@ export async function parseHealthExport(
         canonicalSource,
         startDate,
         endDate,
-        unit: attributes.unit,
-        value,
+        startTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(attributes.startDate),
+        endTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(
+          attributes.endDate ?? attributes.startDate,
+        ),
+        unit: normalized.unit,
+        value: normalized.value,
       };
       parsed.records[metric].push(quantitySample);
     },
@@ -306,18 +446,26 @@ export async function parseHealthExport(
 
       let date: Date | null = null;
       if (attributes.dateComponents) {
-        date = new Date(`${attributes.dateComponents}T00:00:00`);
+        date = parseUtcDateOnly(attributes.dateComponents);
       } else if (attributes.year && attributes.month && attributes.day) {
-        date = new Date(
-          `${attributes.year}-${attributes.month.padStart(2, "0")}-${attributes.day.padStart(2, "0")}T00:00:00`,
+        date = parseUtcDateOnly(
+          `${attributes.year.padStart(4, "0")}-${attributes.month.padStart(2, "0")}-${attributes.day.padStart(2, "0")}`,
         );
       }
 
-      updateCoverage(date);
-
       if (!date) {
+        dataQuality.excludedInvalidTimestampSamples += 1;
         return;
       }
+
+      // Unix-epoch-adjacent ActivitySummary rows are missing-date sentinels
+      // found in real exports. Activity summaries cannot predate HealthKit.
+      if (date < ACTIVITY_SUMMARY_MIN_DATE) {
+        dataQuality.excludedImplausibleActivitySummaries += 1;
+        return;
+      }
+
+      updateCoverage(date);
 
       const sample: ActivitySummarySample = {
         date,
@@ -335,25 +483,38 @@ export async function parseHealthExport(
     if (tag.name === "Workout") {
       parsed.workoutCount += 1;
       const sourceName = attributes.sourceName ?? "未知来源";
-      const startDate = attributes.startDate ? new Date(attributes.startDate) : null;
-      const endDate = attributes.endDate ? new Date(attributes.endDate) : startDate;
+      const startDate = parseTimestamp(attributes.startDate);
+      const endDate = attributes.endDate ? parseTimestamp(attributes.endDate) : startDate;
+
+      registerSource(sourceName, "workout");
+
+      if (!startDate || !endDate || endDate < startDate) {
+        dataQuality.excludedInvalidTimestampSamples += 1;
+        currentWorkout = null;
+        return;
+      }
 
       updateCoverage(startDate);
       updateCoverage(endDate);
-      registerSource(sourceName, "workout");
 
-      if (!startDate || !endDate) {
-        currentWorkout = null;
-        return;
+      const rawDuration = parseNumeric(attributes.duration);
+      const durationMinutes =
+        rawDuration === null ? null : normalizeDurationMinutes(rawDuration, attributes.durationUnit);
+      if (rawDuration !== null && durationMinutes === null) {
+        dataQuality.excludedUnsupportedUnitValues += 1;
       }
 
       currentWorkout = {
         sourceName,
         canonicalSource: canonicalizeSourceName(sourceName),
         workoutActivityType: attributes.workoutActivityType ?? "HKWorkoutActivityTypeOther",
-        durationMinutes: parseNumeric(attributes.duration),
+        durationMinutes,
         startDate,
         endDate,
+        startTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(attributes.startDate),
+        endTimezoneOffsetMinutes: parseTimezoneOffsetMinutes(
+          attributes.endDate ?? attributes.startDate,
+        ),
         activeEnergyBurnedKcal: null,
         basalEnergyBurnedKcal: null,
         distanceKm: null,
@@ -369,17 +530,44 @@ export async function parseHealthExport(
     if (tag.name === "WorkoutStatistics" && currentWorkout) {
       const metricType = attributes.type ?? "";
       if (metricType === "HKQuantityTypeIdentifierActiveEnergyBurned") {
-        currentWorkout.activeEnergyBurnedKcal = parseNumeric(attributes.sum);
+        const raw = parseNumeric(attributes.sum);
+        currentWorkout.activeEnergyBurnedKcal =
+          raw === null ? null : normalizeEnergyKcal(raw, attributes.unit);
+        if (raw !== null && currentWorkout.activeEnergyBurnedKcal === null) {
+          dataQuality.excludedUnsupportedUnitValues += 1;
+        }
       } else if (metricType === "HKQuantityTypeIdentifierBasalEnergyBurned") {
-        currentWorkout.basalEnergyBurnedKcal = parseNumeric(attributes.sum);
+        const raw = parseNumeric(attributes.sum);
+        currentWorkout.basalEnergyBurnedKcal =
+          raw === null ? null : normalizeEnergyKcal(raw, attributes.unit);
+        if (raw !== null && currentWorkout.basalEnergyBurnedKcal === null) {
+          dataQuality.excludedUnsupportedUnitValues += 1;
+        }
       } else if (metricType === "HKQuantityTypeIdentifierHeartRate") {
-        currentWorkout.averageHeartRateBpm = parseNumeric(attributes.average);
-        currentWorkout.minHeartRateBpm = parseNumeric(attributes.minimum);
-        currentWorkout.maxHeartRateBpm = parseNumeric(attributes.maximum);
+        const average = parseNumeric(attributes.average);
+        const minimum = parseNumeric(attributes.minimum);
+        const maximum = parseNumeric(attributes.maximum);
+        currentWorkout.averageHeartRateBpm =
+          average === null ? null : normalizeRatePerMinute(average, attributes.unit);
+        currentWorkout.minHeartRateBpm =
+          minimum === null ? null : normalizeRatePerMinute(minimum, attributes.unit);
+        currentWorkout.maxHeartRateBpm =
+          maximum === null ? null : normalizeRatePerMinute(maximum, attributes.unit);
+        if (
+          (average !== null || minimum !== null || maximum !== null) &&
+          currentWorkout.averageHeartRateBpm === null &&
+          currentWorkout.minHeartRateBpm === null &&
+          currentWorkout.maxHeartRateBpm === null
+        ) {
+          dataQuality.excludedUnsupportedUnitValues += 1;
+        }
       } else if (metricType.startsWith("HKQuantityTypeIdentifierDistance")) {
         const distance = parseNumeric(attributes.sum);
         currentWorkout.distanceKm =
           distance === null ? null : normalizeDistance(distance, attributes.unit);
+        if (distance !== null && currentWorkout.distanceKm === null) {
+          dataQuality.excludedUnsupportedUnitValues += 1;
+        }
       }
       return;
     }

@@ -30,44 +30,50 @@ export const renderZh = {
   bodyCalloutFallback: "身体成分更适合看月度方向。",
 
   // ── Navigation ────────────────────────────────────────────────────
-  navAssessment: "评估",
+  navAssessment: "数据小结",
   navInsights: "分析",
+  navActions: "建议",
   navSleep: "睡眠",
   navRecovery: "恢复",
   navActivity: "活动",
   navBody: "身体",
   navMenstrual: "生理期",
   navAppendix: "附录",
+  skipToContent: "跳到报告正文",
+  reportSectionsLabel: "报告章节",
 
   // ── Summary cards ─────────────────────────────────────────────────
   cardSleepAvg: "睡眠均值",
   cardRestingHr: "静息心率",
   cardRiskSignals: "风险信号",
   cardRiskNeedsAttention: "需要关注",
-  cardRiskNoAbnormal: "当前无异常",
+  cardRiskNoAbnormal: "未触发规则提示",
   cardDataGaps: "数据缺口",
   cardDataGapsAffectsConfidence: "影响置信度",
-  cardDataGapsCoverageGood: "覆盖良好",
+  cardDataGapsCoverageGood: "未发现主要缺口",
   cardRecent30d: "近 30 天",
 
   // ── Assessment section ────────────────────────────────────────────
-  assessmentTitle: "综合健康评估",
-  overallStatusLabel: "整体状态：",
-  readinessGood: "良好",
-  readinessModerate: "中等",
-  readinessLow: "偏低",
+  assessmentTitle: "近期数据小结",
+  overallStatusLabel: "数据状态：",
+  readinessGood: "相对稳定",
+  readinessModerate: "信号混合",
+  readinessLow: "需要留意",
   scoreSleep: "睡眠",
   scoreRecovery: "恢复",
   scoreActivity: "活动",
 
   // ── Insights section ──────────────────────────────────────────────
-  insightsSectionTitle: "关联分析",
+  insightsSectionTitle: "多指标模式",
   crossMetricTitle: "跨指标发现",
   behavioralPatternsTitle: "行为模式",
+  evidenceDetailsTitle: "展开查看跨指标证据",
 
   // ── Overview / Findings ───────────────────────────────────────────
   overviewTitle: "概览",
   keyFindings: "关键发现",
+  strengthsTitle: "保持得好的地方",
+  watchoutsTitle: "需要留意",
 
   // ── Module headers ────────────────────────────────────────────────
   sleepModuleTitle: "睡眠",
@@ -89,8 +95,8 @@ export const renderZh = {
   legendRemPct: "REM 占比",
 
   // ── Heading labels for note blocks ────────────────────────────────
-  normalRangeAssessment: "正常范围评估",
-  healthAdvice: "健康建议",
+  normalRangeAssessment: "参考区间说明",
+  healthAdvice: "可执行建议",
   doctorQuestions: "就诊参考问题",
   sourceCoverage: "来源与覆盖",
 
@@ -101,6 +107,7 @@ export const renderZh = {
   thBaseline: "基线",
   thDelta: "变化",
   thTrend: "趋势",
+  recoveryTableCaption: "恢复指标的最新值、近 30 天均值、90 天基线与变化",
 
   // ── Recovery row labels ───────────────────────────────────────────
   rowRestingHr: "静息心率",
@@ -110,13 +117,13 @@ export const renderZh = {
   rowVo2Max: "最大摄氧量",
 
   // ── Activity section ──────────────────────────────────────────────
-  legendActivityEnergy: "活动能量",
+  legendActivityEnergy: "日常活动能量",
   legendExerciseMin: "锻炼分钟",
   legendStandHours: "站立小时",
-  activityEnergyRecent: "近 30 天活动能量",
+  activityEnergyRecent: "近 30 天日常活动能量",
   activityExerciseRecent: "近 30 天锻炼",
   activityStandRecent: "近 30 天站立",
-  whoAssessment: "WHO 对标评估",
+  whoAssessment: "每周活动参考",
 
   // ── Body composition ──────────────────────────────────────────────
   bodyDataInsufficient: "身体成分数据不足。",
@@ -135,13 +142,14 @@ export const renderZh = {
 
   // ── Actions ───────────────────────────────────────────────────────
   actionsNext2Weeks: "接下来两周建议",
+  actionsPriority: "优先行动",
   actionsSeekCare: "何时建议复查或就医",
   actionsDoctorQuestions: "下次看诊可以问医生的问题",
 
   // ── Appendix ──────────────────────────────────────────────────────
   appendixTitle: "数据边界与补充提示",
   appendixDataLimitations: "数据局限",
-  appendixSourceConfidence: "来源可信度",
+  appendixSourceConfidence: "数据覆盖与来源一致性",
 
   // ── Date range display ────────────────────────────────────────────
   windowStart: "起始",
@@ -150,6 +158,20 @@ export const renderZh = {
   sparklineAriaLabel: (label: string) => `${label} 迷你趋势图`,
   barChartAriaLabel: (label: string) => `${label} 柱状图`,
   lineChartAriaLabel: "趋势图",
+  chartSeriesAriaSummary: (
+    label: string,
+    count: number,
+    firstLabel: string,
+    firstValue: string,
+    latestLabel: string,
+    latestValue: string,
+    minValue: string,
+    maxValue: string,
+  ) =>
+    `${label}：共 ${count} 个数据点；首个 ${firstLabel} 为 ${firstValue}；最新 ${latestLabel} 为 ${latestValue}；范围 ${minValue} 至 ${maxValue}。`,
+  chartNoDataAriaSummary: "没有可供汇总的数值数据点。",
+  chartGranularityNote:
+    "横轴按真实时间显示，并按整段跨度使用统一粒度：90 天内按日、2 年内按周、更长历史按月汇总，避免把不同时间尺度挤在同一张图里。",
 
   // ── Cross-report navigation ───────────────────────────────────────
   crossReportTraining: "运动报告",
@@ -157,10 +179,10 @@ export const renderZh = {
 
   // ── Markdown-specific strings ─────────────────────────────────────
   mdReportTitle: "Apple Health 健康报告",
-  mdAssessmentTitle: "综合健康评估",
+  mdAssessmentTitle: "近期数据小结",
   mdCompositeScore: "综合评分",
   mdOverallStatus: "整体状态",
-  mdCrossMetricTitle: "跨指标关联分析",
+  mdCrossMetricTitle: "跨指标模式",
   mdBehavioralPatterns: "行为模式",
   mdOverviewTitle: "概览",
   mdKeyFindings: "关键发现",
@@ -208,15 +230,15 @@ export const renderZh = {
   mdFactBody: (weight: string, fat: string) =>
     `身体成分：体重 ${weight}，体脂率 ${fat}`,
   mdFactSleepInterpretation: "睡眠解读：",
-  mdFactSleepNormalRange: "睡眠正常范围：",
+  mdFactSleepNormalRange: "睡眠参考区间：",
   mdFactRecoveryInterpretation: "恢复解读：",
-  mdFactRecoveryNormalRange: "恢复正常范围：",
+  mdFactRecoveryNormalRange: "恢复参考区间：",
   mdFactActivityInterpretation: "活动解读：",
-  mdFactActivityNormalRange: "活动正常范围：",
+  mdFactActivityNormalRange: "活动参考口径：",
   mdFactMenstrualCycle: (avg: string, period: string, total: number) =>
     `生理周期：平均 ${avg}，经期 ${period}，共 ${total} 个周期`,
   mdFactMenstrualInterpretation: "生理周期解读：",
-  mdFactMenstrualNormalRange: "正常范围评估：",
+  mdFactMenstrualNormalRange: "参考区间说明：",
   mdDisclaimerTitle: "免责声明",
 
   // ── Score labels (markdown) ───────────────────────────────────────
@@ -230,7 +252,8 @@ export const renderZh = {
   unitDays: " 天",
 
   // ── Footer ────────────────────────────────────────────────────────
-  footerTagline: "隐私优先的 Apple Health 数据分析",
+  footerTagline: "Apple Health 数据分析 · 原始导出在本地解析",
+  projectBoundary: "独立开源项目，与 Apple 无隶属关系",
 };
 
 export type RenderT = typeof renderZh;

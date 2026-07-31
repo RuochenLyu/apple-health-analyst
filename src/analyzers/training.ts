@@ -48,13 +48,18 @@ function addDays(date: Date, count: number): Date {
 }
 
 function monthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function monthRange(month: string): { start: string; end: string; label: string } {
+function monthRange(
+  month: string,
+  effectiveEnd?: Date,
+): { start: string; end: string; label: string } {
   const [year, monthNumber] = month.split("-").map(Number);
   const start = new Date(Date.UTC(year, monthNumber - 1, 1));
-  const end = new Date(Date.UTC(year, monthNumber, 0));
+  const monthEnd = new Date(Date.UTC(year, monthNumber, 0, 23, 59, 59, 999));
+  const end =
+    effectiveEnd && monthEnd > effectiveEnd ? effectiveEnd : monthEnd;
   return {
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
@@ -150,10 +155,11 @@ function indexSeries(
   label: string,
   data: Map<string, number | null>,
   invert = false,
+  effectiveEnd?: Date,
 ): ChartPoint[] {
   const baseline = averageIndex(data);
   return [...data.entries()].map(([month, value]) => {
-    const range = monthRange(month);
+    const range = monthRange(month, effectiveEnd);
     let indexedValue: number | null = null;
     if (value !== null && baseline !== null && baseline !== 0) {
       indexedValue = invert ? round((baseline / value) * 100) : round((value / baseline) * 100);
@@ -409,35 +415,60 @@ function buildRecoveryAfterWorkout(
   sleepByDay: Map<string, number>,
   hrvByDay: Map<string, number>,
   restingHeartRateByDay: Map<string, number>,
-  baselines: { sleepHours: number | null; hrv: number | null; restingHeartRate: number | null },
+  comparisonWindowStart: Date,
+  comparisonWindowEnd: Date,
 ): TrainingRecoveryAfterWorkout {
   const nextDays = [...new Set(workouts.map((workout) => isoDate(addDays(workout.startDate, 1))))];
-  const sleepDeltas: number[] = [];
-  const hrvDeltas: number[] = [];
-  const rhrDeltas: number[] = [];
+  const nextDaySet = new Set(nextDays);
+  const windowStart = isoDate(comparisonWindowStart);
+  const windowEnd = isoDate(comparisonWindowEnd);
 
-  for (const date of nextDays) {
-    const sleep = sleepByDay.get(date);
-    const hrv = hrvByDay.get(date);
-    const rhr = restingHeartRateByDay.get(date);
-
-    if (sleep !== undefined && baselines.sleepHours !== null) {
-      sleepDeltas.push(sleep - baselines.sleepHours);
+  function compareMetric(valuesByDay: Map<string, number>): {
+    nextDayCount: number;
+    comparatorCount: number;
+    delta: number | null;
+  } {
+    const nextDayValues: number[] = [];
+    const comparatorValues: number[] = [];
+    for (const [date, value] of valuesByDay) {
+      if (date < windowStart || date > windowEnd) {
+        continue;
+      }
+      if (nextDaySet.has(date)) {
+        nextDayValues.push(value);
+      } else {
+        comparatorValues.push(value);
+      }
     }
-    if (hrv !== undefined && baselines.hrv !== null) {
-      hrvDeltas.push(hrv - baselines.hrv);
-    }
-    if (rhr !== undefined && baselines.restingHeartRate !== null) {
-      rhrDeltas.push(rhr - baselines.restingHeartRate);
-    }
+    return {
+      nextDayCount: nextDayValues.length,
+      comparatorCount: comparatorValues.length,
+      delta: subtract(average(nextDayValues), average(comparatorValues)),
+    };
   }
 
-  const sampleCount = Math.max(sleepDeltas.length, hrvDeltas.length, rhrDeltas.length);
+  const sleep = compareMetric(sleepByDay);
+  const hrv = compareMetric(hrvByDay);
+  const restingHeartRate = compareMetric(restingHeartRateByDay);
+  const sampleCount = Math.max(
+    sleep.nextDayCount,
+    hrv.nextDayCount,
+    restingHeartRate.nextDayCount,
+  );
   return {
     sampleCount,
-    nextDaySleepHoursDelta: round(average(sleepDeltas)),
-    nextDayHrvDelta: round(average(hrvDeltas)),
-    nextDayRestingHeartRateDelta: round(average(rhrDeltas)),
+    sleepSampleCount: sleep.nextDayCount,
+    hrvSampleCount: hrv.nextDayCount,
+    restingHeartRateSampleCount: restingHeartRate.nextDayCount,
+    sleepComparatorSampleCount: sleep.comparatorCount,
+    hrvComparatorSampleCount: hrv.comparatorCount,
+    restingHeartRateComparatorSampleCount: restingHeartRate.comparatorCount,
+    comparator: "other_observed_days",
+    comparisonWindowStart: windowStart,
+    comparisonWindowEnd: windowEnd,
+    nextDaySleepHoursDelta: sleep.delta,
+    nextDayHrvDelta: hrv.delta,
+    nextDayRestingHeartRateDelta: restingHeartRate.delta,
   };
 }
 
@@ -452,13 +483,35 @@ function buildStatusTags(
     : loadDeltaPct !== null && loadDeltaPct <= -10 ? "load falling"
     : "load stable";
 
+  const measuredRecoverySignals = [
+    recoveryAfterWorkout.nextDaySleepHoursDelta === null ||
+    recoveryAfterWorkout.sleepSampleCount < 5 ||
+    recoveryAfterWorkout.sleepComparatorSampleCount < 5
+      ? null
+      : recoveryAfterWorkout.nextDaySleepHoursDelta >= -0.25,
+    recoveryAfterWorkout.nextDayHrvDelta === null ||
+    recoveryAfterWorkout.hrvSampleCount < 5 ||
+    recoveryAfterWorkout.hrvComparatorSampleCount < 5
+      ? null
+      : recoveryAfterWorkout.nextDayHrvDelta >= -5,
+    recoveryAfterWorkout.nextDayRestingHeartRateDelta === null ||
+    recoveryAfterWorkout.restingHeartRateSampleCount < 5 ||
+    recoveryAfterWorkout.restingHeartRateComparatorSampleCount < 5
+      ? null
+      : recoveryAfterWorkout.nextDayRestingHeartRateDelta <= 2,
+  ].filter((signal): signal is boolean => signal !== null);
+
+  const recoveryConcernCount = measuredRecoverySignals.filter(
+    (signal) => !signal,
+  ).length;
   const recoveryTag =
-    recoveryAfterWorkout.sampleCount > 0 &&
-      (recoveryAfterWorkout.nextDaySleepHoursDelta ?? 0) >= -0.25 &&
-      (recoveryAfterWorkout.nextDayHrvDelta ?? 0) >= -5 &&
-      (recoveryAfterWorkout.nextDayRestingHeartRateDelta ?? 0) <= 2
-      ? "recovery supported"
-      : "recovery unsupported";
+    measuredRecoverySignals.length < 2
+      ? "recovery unknown"
+      : recoveryConcernCount === 0
+        ? "recovery supported"
+        : recoveryConcernCount >= 2
+          ? "recovery concern"
+          : "recovery mixed";
 
   const recentSixMonths = recentMonths.slice(6);
   const activeMonths = recentSixMonths.filter((month) => month.workouts > 0).length;
@@ -473,77 +526,60 @@ function buildStatusTags(
 }
 
 /**
- * Decide the training state from the latest TSB value and the CTL trajectory
- * (30-day and 90-day percentage changes). Recovery signals are still checked,
- * since a weak recovery profile under rising load pushes us into "strained"
- * earlier than TSB alone would.
- *
- * Thresholds are inspired by TrainingPeaks/Athletica/Garmin guidance:
- *   TSB < −30       → over-reached / strained
- *   TSB ∈ (−30, −10] → productive loading (building) when CTL is still rising
- *   TSB ∈ (−10, +5] → neutral / maintaining
- *   TSB > +5         → recovering, especially if CTL is also shrinking
- *   CTL ↓ ≥ 25% vs 90 days → detraining
+ * Decide the training state from scale-independent load changes, with recovery
+ * evidence taking priority. The load series is based on MET-minutes, so
+ * absolute CTL/ATL/TSB cut-offs from TSS-based systems are not transferable.
+ * In particular, a large negative load balance alone must never be labelled
+ * "strained".
  */
 function buildTrainingState(
   trainingLoad: TrainingLoadStatus | null,
   recoverySupport: TrainingRecoverySupport,
-  totalWorkoutCount: number,
-  recoveryAdequate: boolean | null,
 ): TrainingState {
-  if (!trainingLoad || trainingLoad.warmupDays < 28 || totalWorkoutCount < 6) {
+  if (!trainingLoad) {
     return "insufficient_data";
   }
 
-  const { tsb, ctlDelta30dPct, ctlDelta90dPct } = trainingLoad;
+  const { ctlDelta30dPct, ctlDelta90dPct } = trainingLoad;
+  const weakRecoverySignalCount = [
+    recoverySupport.sleepDeltaHours !== null && recoverySupport.sleepDeltaHours <= -0.5,
+    recoverySupport.hrvDeltaPct !== null && recoverySupport.hrvDeltaPct <= -10,
+    recoverySupport.restingHeartRateDeltaBpm !== null &&
+      recoverySupport.restingHeartRateDeltaBpm >= 3,
+  ].filter(Boolean).length;
+  const recoveryConcern =
+    recoverySupport.adequate === false || weakRecoverySignalCount >= 2;
 
-  const ctl30Rising = (ctlDelta30dPct ?? 0) >= 5;
-  const ctl30Strong = (ctlDelta30dPct ?? 0) >= 15;
-  const ctl30Falling = (ctlDelta30dPct ?? 0) <= -5;
-  const ctl90Collapsed = (ctlDelta90dPct ?? 0) <= -25;
-
-  // Detraining dominates when the long-term fitness has clearly eroded.
-  if (ctl90Collapsed) {
+  // Long- and short-horizon decline must agree before calling this detraining.
+  if (
+    ctlDelta90dPct !== null &&
+    ctlDelta90dPct <= -25 &&
+    ctlDelta30dPct !== null &&
+    ctlDelta30dPct <= -5
+  ) {
     return "detraining";
   }
 
-  // Strained: very negative TSB OR moderately negative TSB with aggressive loading.
-  if (tsb <= -30 || (tsb <= -10 && ctl30Strong)) {
-    // If explicit recovery signals are ALSO weak, amplify.
-    if (
-      recoveryAdequate === false ||
-      (recoverySupport.hrvDeltaPct !== null && recoverySupport.hrvDeltaPct <= -10) ||
-      (recoverySupport.restingHeartRateDeltaBpm !== null && recoverySupport.restingHeartRateDeltaBpm >= 3) ||
-      (recoverySupport.sleepDeltaHours !== null && recoverySupport.sleepDeltaHours <= -0.5)
-    ) {
-      return "strained";
-    }
-    // Otherwise still strained — TSB threshold alone is enough when very negative.
-    if (tsb <= -30) {
-      return "strained";
-    }
-    // Moderately negative TSB with strong CTL growth but clean recovery signals
-    // is still "building" — productive loading rather than overload.
+  // "Strained" needs both a material relative load increase and independent
+  // recovery concern. A MET-minute balance value by itself is not evidence of
+  // poor recovery.
+  if (
+    ctlDelta30dPct !== null &&
+    ctlDelta30dPct >= 15 &&
+    recoveryConcern
+  ) {
+    return "strained";
   }
 
-  // Building: moderately negative TSB with rising CTL and clean recovery.
-  if (tsb > -30 && tsb <= -10 && ctl30Rising) {
+  if (ctlDelta30dPct !== null && ctlDelta30dPct >= 5) {
     return "building";
   }
 
-  // Recovering: positive TSB especially with shrinking CTL.
-  if (tsb > 25) {
-    return "recovering";
-  }
-  if (tsb > 5 && ctl30Falling) {
+  if (ctlDelta30dPct !== null && ctlDelta30dPct <= -10) {
     return "recovering";
   }
 
-  // Maintaining: near-zero TSB or stable CTL.
-  if (tsb > -10 && tsb <= 5) {
-    return "maintaining";
-  }
-  if (Math.abs(ctlDelta30dPct ?? 0) < 5 && tsb > -10 && tsb <= 25) {
+  if (ctlDelta30dPct !== null && Math.abs(ctlDelta30dPct) < 5) {
     return "maintaining";
   }
 
@@ -552,6 +588,15 @@ function buildTrainingState(
 
 function buildReadiness(trainingState: TrainingState, recoverySupport: TrainingRecoverySupport): TrainingReadiness {
   if (trainingState === "insufficient_data") {
+    return "insufficient_data";
+  }
+  const availableSignalCount = [
+    recoverySupport.sleepDeltaHours,
+    recoverySupport.hrvDeltaPct,
+    recoverySupport.restingHeartRateDeltaBpm,
+    recoverySupport.adequate,
+  ].filter((value) => value !== null).length;
+  if (availableSignalCount === 0) {
     return "insufficient_data";
   }
   const weakSignalCount = [
@@ -563,7 +608,11 @@ function buildReadiness(trainingState: TrainingState, recoverySupport: TrainingR
   if (trainingState === "strained" || weakSignalCount >= 2) {
     return "low";
   }
-  if (trainingState === "mixed" || weakSignalCount === 1) {
+  if (
+    trainingState === "mixed" ||
+    weakSignalCount === 1 ||
+    recoverySupport.adequate !== true
+  ) {
     return "moderate";
   }
   return "good";
@@ -623,6 +672,7 @@ function weeklyPmcPoints(
   const sortedWeeks = [...byWeek.entries()].sort(([left], [right]) => (left < right ? -1 : 1));
   // Take the last `weeks` weeks.
   const sliced = sortedWeeks.slice(Math.max(0, sortedWeeks.length - weeks));
+  const effectiveEndKey = isoDate(endDate);
   return sliced.map(([mondayKey, entries]) => {
     // Representative value = the last daily sample in that week (chronological).
     const last = entries[entries.length - 1];
@@ -632,7 +682,7 @@ function weeklyPmcPoints(
     return {
       label: mondayKey,
       start: mondayKey,
-      end: sunday,
+      end: sunday > effectiveEndKey ? effectiveEndKey : sunday,
       ctl: last.ctl,
       atl: last.atl,
       tsb: last.tsb,
@@ -694,7 +744,6 @@ function trainingSportInsight(
   context: WorkoutTypeHistoricalContext,
   workouts: WorkoutSample[],
   window: TimeWindow,
-  baselines: { sleepHours: number | null; hrv: number | null; restingHeartRate: number | null },
   sleepByDay: Map<string, number>,
   hrvByDay: Map<string, number>,
   restingHeartRateByDay: Map<string, number>,
@@ -714,7 +763,8 @@ function trainingSportInsight(
     sleepByDay,
     hrvByDay,
     restingHeartRateByDay,
-    baselines,
+    trailing180dStart,
+    window.effectiveEnd,
   );
   const consistencyWorkouts = workouts.filter(
     (workout) => workout.startDate >= trailing365dStart && workout.startDate <= window.effectiveEnd,
@@ -884,11 +934,6 @@ export function buildTrainingInsights(
       context,
       workoutsByType.get(context.type) ?? [],
       window,
-      {
-        sleepHours: historicalContext.sleep.recent30d.avgSleepHours,
-        hrv: historicalContext.recovery.hrv?.recent30d.average ?? null,
-        restingHeartRate: historicalContext.recovery.restingHeartRate?.recent30d.average ?? null,
-      },
       sleepByDay,
       hrvByDay,
       restingHeartRateByDay,
@@ -962,8 +1007,6 @@ export function buildTrainingInsights(
   const trainingState = buildTrainingState(
     trainingLoadStatus,
     recoverySupport,
-    filteredWorkouts.length,
-    recoveryAdequate,
   );
   const readiness = buildReadiness(trainingState, recoverySupport);
 
@@ -1001,28 +1044,52 @@ export function buildTrainingInsights(
         label: t.trainingLoadIndexLabel,
         unit: t.chartUnitIndex,
         visual: "line",
-        points: indexSeries("training_load_index", t.trainingLoadIndexLabel, overallWorkoutMinutesByMonth),
+        points: indexSeries(
+          "training_load_index",
+          t.trainingLoadIndexLabel,
+          overallWorkoutMinutesByMonth,
+          false,
+          window.effectiveEnd,
+        ),
       },
       {
         id: "sleep_index",
         label: t.sleepSupportIndexLabel,
         unit: t.chartUnitIndex,
         visual: "line",
-        points: indexSeries("sleep_index", t.sleepSupportIndexLabel, sleepByMonth),
+        points: indexSeries(
+          "sleep_index",
+          t.sleepSupportIndexLabel,
+          sleepByMonth,
+          false,
+          window.effectiveEnd,
+        ),
       },
       {
         id: "hrv_index",
         label: t.hrvSupportIndexLabel,
         unit: t.chartUnitIndex,
         visual: "line",
-        points: indexSeries("hrv_index", t.hrvSupportIndexLabel, hrvByMonth),
+        points: indexSeries(
+          "hrv_index",
+          t.hrvSupportIndexLabel,
+          hrvByMonth,
+          false,
+          window.effectiveEnd,
+        ),
       },
       {
         id: "rhr_index",
         label: t.restingHeartRateSupportIndexLabel,
         unit: t.chartUnitIndex,
         visual: "line",
-        points: indexSeries("rhr_index", t.restingHeartRateSupportIndexLabel, rhrByMonth, true),
+        points: indexSeries(
+          "rhr_index",
+          t.restingHeartRateSupportIndexLabel,
+          rhrByMonth,
+          true,
+          window.effectiveEnd,
+        ),
       },
     ],
   };
@@ -1038,7 +1105,7 @@ export function buildTrainingInsights(
         unit: t.chartUnitSessions,
         visual: "bar",
         points: sport.consistency.recentMonths.map((month) => {
-          const range = monthRange(month.month);
+          const range = monthRange(month.month, window.effectiveEnd);
           return {
             start: range.start,
             end: range.end,
@@ -1055,7 +1122,7 @@ export function buildTrainingInsights(
         unit: t.chartUnitMinutes,
         visual: "line",
         points: sport.consistency.recentMonths.map((month) => {
-          const range = monthRange(month.month);
+          const range = monthRange(month.month, window.effectiveEnd);
           return {
             start: range.start,
             end: range.end,

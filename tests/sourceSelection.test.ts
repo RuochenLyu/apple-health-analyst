@@ -23,6 +23,11 @@ describe("primary source selection", () => {
     expect(selected.sleep?.staged).toBe(true);
     expect(selected.recovery.restingHeartRate?.canonicalName).toBe(selected.recovery.hrv?.canonicalName);
     expect(selected.recovery.restingHeartRate?.displayName).toBe("Riley’s Watch");
+    expect(
+      new Set(
+        Object.values(selected.recovery).map((source) => source?.displayName),
+      ),
+    ).toEqual(new Set(["Riley’s Watch"]));
     expect(selected.bodyComposition.bodyMass?.displayName).toBe("Withings Body Scale");
     expect(selected.bodyComposition.bodyFatPercentage?.displayName).toBe("Withings Body Scale");
   });

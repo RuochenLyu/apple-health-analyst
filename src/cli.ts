@@ -15,6 +15,7 @@ import {
 } from "./pipeline/writeOutputs.js";
 import {
   PACKAGE_NAME,
+  PACKAGE_VERSION,
   type InsightBundle,
   type NarrativeReport,
   type ReportType,
@@ -32,6 +33,13 @@ function asInsightBundle(value: unknown, reportType: ReportType): InsightBundle 
   }
 
   const candidate = value as Partial<InsightBundle>;
+  if (
+    !candidate.metadata ||
+    typeof candidate.metadata.schemaVersion !== "string" ||
+    !["zh-CN", "en-US", "zh", "en"].includes(candidate.metadata.language)
+  ) {
+    throw new Error("insights.json metadata is missing or unsupported.");
+  }
   if (!Array.isArray(candidate.charts)) {
     throw new Error("insights.json is missing the charts array.");
   }
@@ -56,6 +64,23 @@ function asInsightBundle(value: unknown, reportType: ReportType): InsightBundle 
   return candidate as InsightBundle;
 }
 
+function asLocale(value: string): Locale {
+  if (value === "zh" || value === "en") {
+    return value;
+  }
+  throw new Error(`Unsupported language: ${value}. Expected zh or en.`);
+}
+
+function asTopSportCount(value: string | undefined): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!/^[1-8]$/.test(value)) {
+    throw new Error(`--top-sports must be an integer from 1 to 8; got ${value}.`);
+  }
+  return Number(value);
+}
+
 function asReportType(value: string | undefined): ReportType {
   if (!value || value === "health") {
     return "health";
@@ -76,14 +101,10 @@ async function runPrepare(
     topSports?: string;
   },
 ) {
-  const locale = (options.lang === "zh" ? "zh" : "en") as Locale;
+  const locale = asLocale(options.lang);
   const t = await getTranslations(locale);
   const outputDir = path.resolve(options.out);
-  const topSportCount =
-    options.topSports !== undefined ? Number.parseInt(options.topSports, 10) : undefined;
-  if (topSportCount !== undefined && (!Number.isFinite(topSportCount) || topSportCount < 1)) {
-    throw new Error(`--top-sports must be a positive integer; got ${options.topSports}.`);
-  }
+  const topSportCount = asTopSportCount(options.topSports);
   const prepared = await prepareAnalysis(
     exportZip,
     { ...options, locale, topSportCount },
@@ -131,7 +152,11 @@ async function runRender(
 
 export async function runCli(argv: string[]) {
   const program = new Command();
-  program.name(PACKAGE_NAME).description("Analyze Apple Health export ZIP files.");
+  program
+    .name(PACKAGE_NAME)
+    .description("Analyze Apple Health export ZIP files.")
+    .version(PACKAGE_VERSION)
+    .showHelpAfterError();
 
   program
     .command("prepare")

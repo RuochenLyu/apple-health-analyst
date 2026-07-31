@@ -11,37 +11,29 @@ export const activityZh = {
   noDataNote: "所选时间窗口内没有可用的活动摘要或训练记录。",
 
   // ── buildWhoGuidelineAssessment ──
-  whoNoData: "运动数据不足，无法对标 WHO 指南。",
-  whoExceeds: (weeklyMinutes: number) =>
-    `周均运动约 ${weeklyMinutes} 分钟，超过 WHO 推荐的 300 分钟上限，可获得额外的健康收益。不过高运动量同时需要关注恢复是否跟得上。`,
-  whoMeets: (weeklyMinutes: number) =>
-    `周均运动约 ${weeklyMinutes} 分钟，达到 WHO 推荐的中等强度有氧运动标准（150-300 分钟/周）。这个运动量能有效降低心血管疾病、2 型糖尿病和部分癌症的风险。`,
-  whoPartial: (weeklyMinutes: number, gap: number) =>
-    `周均运动约 ${weeklyMinutes} 分钟，低于 WHO 推荐的 150 分钟/周最低标准，但已经在积累健康收益。每周再增加 ${gap} 分钟就能达标。`,
-  whoFarBelow: (weeklyMinutes: number) =>
-    `周均运动约 ${weeklyMinutes} 分钟，明显低于 WHO 推荐的 150 分钟/周最低标准。任何运动都比完全不动好——从每天增加 10 分钟快走开始是一个可行的起点。`,
+  whoNoData: "没有可用的 Apple 锻炼时间记录，无法提供每周活动背景。",
+  exerciseGuidelineContext: (weeklyMinutes: number) =>
+    `Apple 锻炼时间折算约 ${weeklyMinutes} 分钟/周。该字段不能完整确认活动强度或未记录的运动，因此不能据此计算 WHO 达标差距，也不据此生成运动处方。`,
 
   // ── buildWorkoutVariety ──
   varietyNone: "近期没有记录训练类型。",
   varietySingle: (type: string) =>
     `运动类型较单一（仅 ${type}），建议搭配不同类型的运动，如有氧 + 力量 + 柔韧性训练，以获得更全面的健康收益。`,
   varietyBalanced: (types: string) =>
-    `运动类型较均衡（${types}），涵盖了一定的多样性，这有助于全面发展体能并降低运动损伤风险。`,
+    `近期记录包含多种运动（${types}）；多样性描述运动构成，不单独代表训练是否均衡或损伤风险更低。`,
   varietyRich: (types: string, count: number) =>
-    `运动类型丰富（${types} 等 ${count} 种），多样化的运动组合能更好地发展心肺耐力、肌肉力量和关节灵活性。`,
+    `近期记录包含 ${count} 种运动（${types} 等）；应结合各类型的频率、强度和个人目标判断组合是否合适。`,
 
   // ── buildNormalRangeAssessment ──
-  exerciseMeetsWho: (dailyMin: number, weeklyMin: number) =>
-    `日均运动 ${dailyMin} 分钟（周均 ${weeklyMin} 分钟），达到 WHO 推荐标准`,
-  exerciseBelowWho: (dailyMin: number, weeklyMin: number) =>
-    `日均运动 ${dailyMin} 分钟（周均 ${weeklyMin} 分钟），未达 WHO 150 分钟/周标准`,
+  exerciseRecorded: (dailyMin: number, weeklyMin: number) =>
+    `Apple 锻炼时间日均 ${dailyMin} 分钟（折算约 ${weeklyMin} 分钟/周）；适合观察个人趋势，不等同于按强度分类的活动分钟`,
 
   standMeetsGoal: (hours: number) =>
-    `日均站立 ${hours} 小时，达到 Apple 默认目标（12 小时）`,
+    `日均约 ${hours} 个小时达到 Apple“站立小时”的记录条件`,
   standReasonable: (hours: number) =>
-    `日均站立 ${hours} 小时，虽未达 12 小时目标但处于合理水平`,
+    `日均约 ${hours} 个小时达到 Apple“站立小时”的记录条件；这不是实际站立总时长`,
   standLow: (hours: number) =>
-    `日均站立仅 ${hours} 小时，久坐时间偏长，建议每小时起身活动 1-2 分钟`,
+    `日均约 ${hours} 个小时达到 Apple“站立小时”的记录条件；记录较少，但不能据此计算总久坐时长`,
 
   activeEnergyBurned: (kcal: number) =>
     `日均活动消耗 ${kcal} kcal`,
@@ -51,36 +43,22 @@ export const activityZh = {
   // ── buildInterpretation ──
   interpretationInsufficientData: "记录不足，暂时无法给出综合解读。",
 
-  whoComplianceMet: "你的运动量达到 WHO 推荐标准，这对心血管健康、代谢调节和心理健康都有显著的保护作用",
-  whoCompliancePartial: "当前运动量虽未达到 WHO 推荐标准，但保持活跃的习惯已经是非常好的起点",
+  exerciseInterpretation: "Apple 锻炼时间可用于观察个人活动趋势，但不能单独判定公共健康指南是否达标",
 
   trendImproving: (delta: number) =>
-    `近期日均运动比基线期增加了约 ${delta} 分钟，运动习惯正在改善`,
+    `近期记录的日均运动比基线期增加了约 ${delta} 分钟`,
   trendDeclining: (delta: number) =>
     `近期日均运动比基线期减少了约 ${delta} 分钟，如果非有意为之，建议关注是否有时间或动力方面的障碍`,
   trendStable: "运动量保持稳定，一致性是长期获益的关键",
 
-  sedentaryWarning: "久坐时间偏长，独立于运动量之外，长时间不间断久坐本身也是心血管和代谢健康的风险因素",
+  sedentaryWarning: "达到 Apple“站立小时”条件的小时数较少；这提示可关注日间活动间隔，但不能直接量化久坐时长",
 
   // ── buildActionableAdvice ──
-  adviceWhoGap: (gap: number, dailyGap: number | null) =>
-    `距离 WHO 推荐标准还差约 ${gap} 分钟/周。尝试每天增加 ${dailyGap} 分钟活动，比如饭后散步或选择楼梯代替电梯。`,
-  adviceStandMore: "设置每小时一次的站立提醒，起身活动 1-2 分钟——打断久坐比集中运动对代谢的持续影响更大。",
+  adviceStandMore: "可设置活动提醒，在长时间静坐或伏案期间定期起身；Apple“站立小时”只能记录是否在该小时内活动过。",
   adviceDeclining: "运动量呈下降趋势，建议找一个运动伙伴或设定具体的运动日程表，外部约束比意志力更可靠。",
-  adviceCrossTrain: "尝试每周加入一次不同类型的运动（如有氧运动者加入力量训练），交叉训练能降低损伤风险并提升整体体能。",
-  adviceRecovery: "运动量充足，确保安排足够的恢复日（每周至少 1-2 天轻量或休息），避免过度训练导致的免疫抑制或运动损伤。",
-  adviceGood: "你的运动习惯良好，继续保持规律运动和多样化的训练类型。",
-  adviceTrack: "记录每次训练有助于追踪进步和调整计划，坚持使用 Apple Watch 自动记录运动数据。",
-
-  // ── buildDoctorTalkingPoints ──
-  doctorLowActivity: (weeklyMin: number) =>
-    `"我目前每周运动约 ${weeklyMin} 分钟，有没有适合我的安全起步运动方案？"`,
-  doctorHighActivity: (weeklyMin: number) =>
-    `"我每周运动约 ${weeklyMin} 分钟，运动量较大，需要注意什么？是否需要定期做运动心电图？"`,
-  doctorSedentary: (hours: number) =>
-    `"我的工作需要长时间久坐（日均站立仅 ${hours} 小时），这会增加哪些健康风险？"`,
-  doctorOptimize: (weeklyMin: number) =>
-    `"基于我的年龄和当前运动量（周均 ${weeklyMin} 分钟），有没有更优化的运动组合建议？"`,
+  adviceCrossTrain: "若符合个人目标，可尝试每周加入一次不同类型的运动，并从低强度开始观察适应情况。",
+  adviceGood: "现有记录中的运动节奏较稳定；是否维持或调整组合应结合个人目标、疲劳和疼痛。",
+  adviceTrack: "继续用现有设备或应用记录运动，有助于观察个人趋势；解读时同时记录运动类型、强度、疲劳和疼痛。",
 };
 export type ActivityT = Omit<typeof activityZh, "workoutLabelLocale"> & {
   workoutLabelLocale: "zh" | "en";

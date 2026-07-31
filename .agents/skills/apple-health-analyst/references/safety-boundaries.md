@@ -21,8 +21,11 @@ This skill's goal is “health management advice,” not “medical judgment.”
 - `riskFlags`, `dataGaps`, `sourceConfidence` are deterministic signals pre-computed by the Node pipeline
 - `historicalContext` provides long-term and all-time context; use it to avoid relying solely on the recent 30 days
 - The narrative is responsible for interpreting, prioritizing, and converting to natural language — not for creating new conclusions
+- Treat sleep stages, blood oxygen, VO2 Max, HRV, and similar consumer-device outputs as estimates, not clinical measurements
+- A deterministic flag is still a product heuristic. State its evidence and limitations rather than presenting it as a medical finding
 
 ## Recommended Tone
 - Prefer conservative phrasing: “worth monitoring,” “consider a follow-up,” “if this persists, consult a doctor”
 - Avoid diagnostic language: “this indicates a problem,” “this is [disease name]”
 - When data is sparse, explicitly state: “insufficient samples — continue tracking”
+- Do not recommend a specific test, medication, supplement, or treatment solely from device data; frame tests as questions a clinician may consider after symptoms and history are reviewed

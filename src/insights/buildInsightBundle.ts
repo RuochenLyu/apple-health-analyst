@@ -54,7 +54,7 @@ const RECOVERY_UNITS: Record<RecoveryMetricKey, string> = {
   hrv: "ms",
   oxygenSaturation: "%",
   respiratoryRate: "breaths/min",
-  vo2Max: "mL/min·kg",
+  vo2Max: "mL/kg/min",
 };
 
 const BODY_UNITS: Record<BodyMetricKey, string> = {
@@ -68,7 +68,7 @@ function buildRecoveryMeta(t: InsightsT): Record<RecoveryMetricKey, TimedMetric>
     hrv: { label: t.hrvLabel, unit: "ms" },
     oxygenSaturation: { label: t.oxygenSaturationLabel, unit: "%" },
     respiratoryRate: { label: t.respiratoryRateLabel, unit: "breaths/min" },
-    vo2Max: { label: t.vo2MaxLabel, unit: "mL/min·kg" },
+    vo2Max: { label: t.vo2MaxLabel, unit: "mL/kg/min" },
   };
 }
 
@@ -88,7 +88,47 @@ function daysBetweenInclusive(start: Date | null, end: Date | null): number {
     return 0;
   }
   const dayMs = 24 * 60 * 60 * 1000;
-  return Math.max(1, Math.floor((end.getTime() - start.getTime()) / dayMs) + 1);
+  const startDay = Date.UTC(
+    start.getUTCFullYear(),
+    start.getUTCMonth(),
+    start.getUTCDate(),
+  );
+  const endDay = Date.UTC(
+    end.getUTCFullYear(),
+    end.getUTCMonth(),
+    end.getUTCDate(),
+  );
+  return Math.max(1, Math.floor((endDay - startDay) / dayMs) + 1);
+}
+
+function windowCoverage(
+  parsed: ParsedHealthExport,
+  window: TimeWindow,
+): { earliestSeen: Date | null; latestSeen: Date | null } {
+  let earliestSeen: Date | null = null;
+  let latestSeen: Date | null = null;
+  const include = (date: Date) => {
+    if (!isWithinWindow(date, window)) {
+      return;
+    }
+    if (!earliestSeen || date < earliestSeen) {
+      earliestSeen = date;
+    }
+    if (!latestSeen || date > latestSeen) {
+      latestSeen = date;
+    }
+  };
+
+  for (const records of Object.values(parsed.records)) {
+    for (const record of records) include(record.startDate);
+  }
+  for (const workout of parsed.workouts) include(workout.startDate);
+  for (const summary of parsed.activitySummaries) include(summary.date);
+  for (const sample of parsed.menstrualFlow) include(sample.startDate);
+  for (const sample of parsed.intermenstrualBleeding) include(sample.startDate);
+  for (const sample of parsed.contraceptive) include(sample.startDate);
+
+  return { earliestSeen, latestSeen };
 }
 
 function historicalWindow(
@@ -154,9 +194,7 @@ function buildNumericHistoricalContext(
     return undefined;
   }
 
-  const filtered = records.filter((record) =>
-    window.effectiveStart ? record.startDate >= window.effectiveStart : true,
-  );
+  const filtered = records.filter((record) => isWithinWindow(record.startDate, window));
   if (filtered.length === 0) {
     return undefined;
   }
@@ -697,9 +735,12 @@ function buildMenstrualCycleCharts(
   window: TimeWindow,
   t: InsightsT,
 ): ChartGroup | null {
-  if (parsed.menstrualFlow.length === 0) return null;
+  const flowSamples = parsed.menstrualFlow.filter((sample) =>
+    isWithinWindow(sample.startDate, window),
+  );
+  if (flowSamples.length === 0) return null;
 
-  const periods = detectPeriods(parsed.menstrualFlow);
+  const periods = detectPeriods(flowSamples);
   if (periods.length < 2) return null;
 
   const cycleLengths = calculateCycleLengths(periods);
@@ -759,40 +800,64 @@ export function buildSourceConfidence(summary: AnalysisSummary, t: InsightsT): S
   const recoveryMetrics = Object.values(summary.recovery.metrics).filter(
     (metric): metric is NonNullable<(typeof summary.recovery.metrics)[RecoveryMetricKey]> => Boolean(metric),
   );
-  const recoverySampleDays = recoveryMetrics.map((metric) => metric.coverageDays);
+  const recentRecoveryMetrics = recoveryMetrics.filter(
+    (metric) => metric.recent30d.sampleCount > 0,
+  );
+  const recentRecoverySampleCounts = recentRecoveryMetrics.map(
+    (metric) => metric.recent30d.sampleCount,
+  );
   const recoverySources = unique(
-    Object.values(summary.recovery.sources).filter((value): value is string => Boolean(value)),
+    (Object.keys(summary.recovery.metrics) as RecoveryMetricKey[])
+      .filter((metric) => (summary.recovery.metrics[metric]?.recent30d.sampleCount ?? 0) > 0)
+      .map((metric) => summary.recovery.sources[metric])
+      .filter((value): value is string => Boolean(value)),
   );
   const bodyMetrics = Object.values(summary.bodyComposition.metrics).filter(Boolean);
-  const bodySources = Object.values(summary.bodyComposition.sources).filter(
-    (value): value is string => Boolean(value),
+  const recentBodyMetrics = bodyMetrics.filter(
+    (metric) => (metric?.recent30d.sampleCount ?? 0) > 0,
   );
+  const bodySources = unique(
+    (Object.keys(summary.bodyComposition.metrics) as BodyMetricKey[])
+      .filter((metric) => (summary.bodyComposition.metrics[metric]?.recent30d.sampleCount ?? 0) > 0)
+      .map((metric) => summary.bodyComposition.sources[metric])
+      .filter(
+      (value): value is string => Boolean(value),
+    ),
+  );
+  const recentSleepNights = summary.sleep.recent30d.nights;
 
   return [
     {
       module: "sleep",
       level:
-        summary.sleep.coverageDays >= 14 && summary.sleep.staged
+        recentSleepNights >= 14 && summary.sleep.staged
           ? "high"
-          : summary.sleep.coverageDays >= 5
+          : recentSleepNights >= 5
             ? "medium"
             : "low",
       summary:
-        summary.sleep.source && summary.sleep.coverageDays > 0
-          ? t.sleepConfidenceSummary(summary.sleep.source, summary.sleep.coverageDays, summary.sleep.staged)
+        summary.sleep.source && recentSleepNights > 0
+          ? t.sleepConfidenceSummary(summary.sleep.source, recentSleepNights, summary.sleep.staged)
           : t.sleepConfidenceInsufficient,
     },
     {
       module: "recovery",
       level:
-        recoveryMetrics.length >= 3 && recoverySources.length <= 1 && Math.min(...recoverySampleDays) >= 2
+        recentRecoveryMetrics.length >= 3 &&
+        recentRecoveryMetrics.length === recoveryMetrics.length &&
+        recoverySources.length <= 1 &&
+        Math.min(...recentRecoverySampleCounts) >= 2
           ? "high"
-          : recoveryMetrics.length >= 2
+          : recentRecoveryMetrics.length >= 2
             ? "medium"
             : "low",
       summary:
-        recoveryMetrics.length > 0
-          ? t.recoveryConfidenceSummary(recoveryMetrics.length, recoverySources.join(" / "))
+        recentRecoveryMetrics.length > 0
+          ? t.recoveryConfidenceSummary(
+              recentRecoveryMetrics.length,
+              recoveryMetrics.length,
+              recoverySources.join(" / "),
+            )
           : t.recoveryConfidenceInsufficient,
     },
     {
@@ -805,21 +870,28 @@ export function buildSourceConfidence(summary: AnalysisSummary, t: InsightsT): S
             : "low",
       summary:
         summary.activity.status === "ok"
-          ? t.activityConfidenceSummary(summary.activity.coverageDays, summary.activity.recent30d.workouts)
+          ? t.activityConfidenceSummary(
+              summary.activity.recent30d.dayCount,
+              summary.activity.recent30d.workouts,
+            )
           : t.activityConfidenceInsufficient,
     },
     {
       module: "bodyComposition",
       level:
-        (summary.bodyComposition.metrics.bodyMass?.sampleCount ?? 0) >= 4 &&
-        (summary.bodyComposition.metrics.bodyFatPercentage?.sampleCount ?? 0) >= 3
+        (summary.bodyComposition.metrics.bodyMass?.recent30d.sampleCount ?? 0) >= 4 &&
+        (summary.bodyComposition.metrics.bodyFatPercentage?.recent30d.sampleCount ?? 0) >= 3
           ? "high"
-          : bodyMetrics.length > 0
+          : recentBodyMetrics.length > 0
             ? "medium"
             : "low",
       summary:
-        bodyMetrics.length > 0
-          ? t.bodyConfidenceSummary(bodySources.join(" / ") || t.bodyConfidenceDefaultSource)
+        recentBodyMetrics.length > 0
+          ? t.bodyConfidenceSummary(
+              recentBodyMetrics.length,
+              bodyMetrics.length,
+              bodySources.join(" / ") || t.bodyConfidenceDefaultSource,
+            )
           : t.bodyConfidenceInsufficient,
     },
     ...(summary.menstrualCycle
@@ -957,14 +1029,21 @@ export function buildRiskFlags(summary: AnalysisSummary, t: InsightsT): RiskFlag
     });
   }
 
-  if (oxygen?.latest?.value !== undefined && oxygen.latest.value <= 93) {
+  if (
+    oxygen?.recent30d.average !== null &&
+    oxygen?.recent30d.average !== undefined &&
+    oxygen.recent30d.average <= 93 &&
+    oxygen.recent30d.sampleCount >= 3
+  ) {
     flags.push({
       id: "oxygen_low",
       module: "recovery",
       severity: "high",
       title: t.oxygenLowTitle,
       summary: t.oxygenLowSummary,
-      evidence: t.oxygenLowEvidence(`${oxygen.latest.value}${oxygen.unit}`),
+      evidence: t.oxygenLowEvidence(
+        `${oxygen.recent30d.average}${oxygen.unit} (${oxygen.recent30d.sampleCount} samples)`,
+      ),
       recommendationFocus: t.oxygenLowRecommendation,
       seekCare: true,
     });
@@ -1210,6 +1289,7 @@ export function buildInsightBundle(
   crossMetricT?: CrossMetricT,
   options: BuildInsightBundleOptions = {},
 ): InsightBundle {
+  const scopeCoverage = windowCoverage(parsed, window);
   const menstrualChart = buildMenstrualCycleCharts(parsed, window, t);
   const charts = [
     buildSleepCharts(parsed, primarySources, window, t),
@@ -1220,11 +1300,11 @@ export function buildInsightBundle(
   ];
   const historicalContext: InsightHistoricalContext = {
     scope: {
-      earliestSeen: summary.coverage.earliestSeen,
-      latestSeen: summary.coverage.latestSeen,
+      earliestSeen: scopeCoverage.earliestSeen?.toISOString() ?? null,
+      latestSeen: scopeCoverage.latestSeen?.toISOString() ?? null,
       totalSpanDays: daysBetweenInclusive(
-        summary.coverage.earliestSeen ? new Date(summary.coverage.earliestSeen) : null,
-        summary.coverage.latestSeen ? new Date(summary.coverage.latestSeen) : null,
+        scopeCoverage.earliestSeen,
+        scopeCoverage.latestSeen,
       ),
     },
     sleep: buildSleepHistoricalContext(parsed, primarySources, window, summary),

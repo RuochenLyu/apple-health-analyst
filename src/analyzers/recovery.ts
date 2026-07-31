@@ -10,6 +10,7 @@ import type {
 import type { RecoveryT } from "../i18n/zh/recovery.js";
 
 import { round, average } from "./mathUtils.js";
+import { isWithinWindow } from "../normalize/buildTimeWindow.js";
 
 const EMPTY_HEALTH_INSIGHTS: RecoveryHealthInsights = {
   rhrTrend: null,
@@ -78,7 +79,7 @@ export function analyzeRecovery(
     hrv: "ms",
     oxygenSaturation: "%",
     respiratoryRate: "breaths/min",
-    vo2Max: "mL/min·kg",
+    vo2Max: "mL/kg/min",
   };
 
   const metrics = Object.fromEntries(
@@ -86,7 +87,7 @@ export function analyzeRecovery(
       .map((metric) => {
         const sourceName = sourceNames[metric];
         const records = (recordsByMetric[metric] ?? []).filter((record) =>
-          window.effectiveStart ? record.startDate >= window.effectiveStart : true,
+          isWithinWindow(record.startDate, window),
         );
 
         if (!sourceName || records.length === 0) {
@@ -140,7 +141,7 @@ function buildRecoveryHealthInsights(
 }
 
 function buildRhrTrend(rhr: NumericComparison | undefined): RecoveryHealthInsights["rhrTrend"] {
-  if (!rhr?.delta) return null;
+  if (rhr?.delta === null || rhr?.delta === undefined) return null;
   // Lower RHR is better
   if (rhr.delta <= -2) return "improving";
   if (rhr.delta >= 2) return "worsening";
@@ -148,7 +149,7 @@ function buildRhrTrend(rhr: NumericComparison | undefined): RecoveryHealthInsigh
 }
 
 function buildHrvTrend(hrv: NumericComparison | undefined): RecoveryHealthInsights["hrvTrend"] {
-  if (!hrv?.delta) return null;
+  if (hrv?.delta === null || hrv?.delta === undefined) return null;
   // Higher HRV is better
   if (hrv.delta >= 3) return "improving";
   if (hrv.delta <= -3) return "worsening";
@@ -175,25 +176,16 @@ function buildNormalRangeAssessment(metrics: RecoveryAnalysis["metrics"], t: Rec
   const rr = metrics.respiratoryRate;
   const vo2 = metrics.vo2Max;
 
-  if (rhr?.recent30d.average) {
-    const avg = rhr.recent30d.average;
-    if (avg >= 40 && avg <= 60) {
-      parts.push(t.rhrExcellent(avg));
-    } else if (avg > 60 && avg <= 100) {
-      parts.push(t.rhrNormal(avg));
-    } else if (avg > 100) {
-      parts.push(t.rhrHigh(avg));
-    } else {
-      parts.push(t.rhrLow(avg));
-    }
+  if (rhr?.recent30d.average !== null && rhr?.recent30d.average !== undefined) {
+    parts.push(t.rhrObserved(rhr.recent30d.average, rhr.delta));
   }
 
-  if (hrv?.recent30d.average) {
+  if (hrv?.recent30d.average !== null && hrv?.recent30d.average !== undefined) {
     const avg = hrv.recent30d.average;
     parts.push(t.hrvNote(avg));
   }
 
-  if (spo2?.recent30d.average) {
+  if (spo2?.recent30d.average !== null && spo2?.recent30d.average !== undefined) {
     const avg = spo2.recent30d.average;
     if (avg >= 95) {
       parts.push(t.spo2InRangeNormal(avg));
@@ -202,26 +194,14 @@ function buildNormalRangeAssessment(metrics: RecoveryAnalysis["metrics"], t: Rec
     }
   }
 
-  if (rr?.recent30d.average) {
-    const avg = rr.recent30d.average;
-    if (avg >= 12 && avg <= 20) {
-      parts.push(t.rrNormal(avg));
-    } else if (avg < 12) {
-      parts.push(t.rrLow(avg));
-    } else {
-      parts.push(t.rrHigh(avg));
-    }
+  if (rr?.recent30d.average !== null && rr?.recent30d.average !== undefined) {
+    parts.push(t.rrObserved(rr.recent30d.average, rr.delta));
   }
 
-  if (vo2?.recent30d.average) {
-    const avg = vo2.recent30d.average;
-    if (avg >= 40) {
-      parts.push(t.vo2Good(avg));
-    } else if (avg >= 30) {
-      parts.push(t.vo2Moderate(avg));
-    } else {
-      parts.push(t.vo2Low(avg));
-    }
+  if (vo2?.recent30d.average !== null && vo2?.recent30d.average !== undefined) {
+    // Cardio-fitness interpretation depends on age, sex, medications, and
+    // device context that this export does not reliably provide.
+    parts.push(t.vo2Moderate(vo2.recent30d.average));
   }
 
   return parts.length > 0 ? parts.join(t.partSep) + t.partEnd : t.normalRangeInsufficientData;
@@ -256,11 +236,6 @@ function buildInterpretation(metrics: RecoveryAnalysis["metrics"], t: RecoveryT)
     parts.push(t.spo2LowContext(spo2.recent30d.average));
   }
 
-  // RHR absolute value context
-  if (rhr?.recent30d.average && rhr.recent30d.average > 100) {
-    parts.push(t.rhrHighContext);
-  }
-
   return parts.length > 0 ? parts.join(t.sentSep) + t.partEnd : "";
 }
 
@@ -285,15 +260,6 @@ function buildActionableAdvice(metrics: RecoveryAnalysis["metrics"], t: Recovery
     advice.push(t.adviceSpo2Low);
   }
 
-  if (rhr?.recent30d.average && rhr.recent30d.average > 80) {
-    advice.push(t.adviceRhrHigh);
-  }
-
-  const vo2 = metrics.vo2Max;
-  if (vo2?.recent30d.average && vo2.recent30d.average < 30) {
-    advice.push(t.adviceVo2Low);
-  }
-
   if (advice.length === 0) {
     advice.push(t.adviceGood);
   }
@@ -307,31 +273,29 @@ function buildDoctorTalkingPoints(metrics: RecoveryAnalysis["metrics"], t: Recov
   const rhr = metrics.restingHeartRate;
   const hrv = metrics.hrv;
   const spo2 = metrics.oxygenSaturation;
-  const rr = metrics.respiratoryRate;
 
-  if (rhr?.recent30d.average && rhr.recent30d.average > 100) {
+  if (
+    rhr?.recent30d.average !== null &&
+    rhr?.recent30d.average !== undefined &&
+    rhr.recent30d.average > 100
+  ) {
     points.push(t.doctorRhrHigh(rhr.recent30d.average));
   }
 
-  if (rhr?.delta && rhr.delta >= 5) {
+  if (rhr?.delta !== null && rhr?.delta !== undefined && rhr.delta >= 5) {
     points.push(t.doctorRhrRising(rhr.delta));
   }
 
-  if (spo2?.recent30d.average && spo2.recent30d.average < 95) {
+  if (
+    spo2?.recent30d.average !== null &&
+    spo2?.recent30d.average !== undefined &&
+    spo2.recent30d.average < 95
+  ) {
     points.push(t.doctorSpo2Low(spo2.recent30d.average));
   }
 
-  if (hrv?.delta && hrv.delta <= -10) {
+  if (hrv?.delta !== null && hrv?.delta !== undefined && hrv.delta <= -10) {
     points.push(t.doctorHrvDrop(Math.abs(hrv.delta)));
-  }
-
-  if (rr?.recent30d.average && (rr.recent30d.average < 12 || rr.recent30d.average > 20)) {
-    const direction = rr.recent30d.average < 12 ? t.directionLow : t.directionHigh;
-    points.push(t.doctorRrAbnormal(rr.recent30d.average, direction));
-  }
-
-  if (points.length === 0) {
-    points.push(t.doctorNormal);
   }
 
   return points;

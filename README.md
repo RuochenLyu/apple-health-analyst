@@ -6,24 +6,23 @@
 
 [中文文档](https://github.com/RuochenLyu/apple-health-analyst/blob/main/README.zh-CN.md)
 
-Analyze Apple Health export data locally, generating either a health report or a training report with cross-metric reasoning, long-term trends, and offline HTML output.
+Analyze Apple Health export data locally, generating complementary health and multi-sport training reports with cross-metric reasoning, long-term trends, and offline HTML output.
 
-Not a data dashboard — you can already see the data on your phone. This tool's value is **interpreting your data like a health advisor**: How are sleep and recovery linked? How does schedule regularity affect HRV? Does training load match recovery capacity?
+Not a data dashboard — you can already see the data on your phone. This tool places records in personal long-term context: Do sleep and recovery metrics move together? Is schedule regularity associated with HRV in the available paired samples? Does training load have enough recovery support?
 
-**Samples:** [Health (EN)](https://ruochenlyu.github.io/apple-health-analyst/) · [Training (EN)](https://ruochenlyu.github.io/apple-health-analyst/training.report.html) · [健康报告](https://ruochenlyu.github.io/apple-health-analyst/zh/report.html) · [运动报告](https://ruochenlyu.github.io/apple-health-analyst/zh/training.report.html)
-
-![Sample Report](https://raw.githubusercontent.com/RuochenLyu/apple-health-analyst/main/docs/screenshot-en.png)
+**Fully synthetic samples (no real person’s data):** [Health (EN)](https://kshift.me/apple-health-analyst/) · [Training (EN)](https://kshift.me/apple-health-analyst/training.report.html) · [健康报告](https://kshift.me/apple-health-analyst/zh/report.html) · [运动报告](https://kshift.me/apple-health-analyst/zh/training.report.html)
 
 ## Features
 
-- **Cross-metric correlation analysis** — Sleep-HRV coupling, training-recovery balance, schedule regularity assessment
-- **Workout-type trend analysis** — Break out long-term trends for specific workouts like boxing, strength training, or cycling
-- **Dedicated training report** — Evaluate training state, readiness, load-vs-recovery balance, and sport-specific trends, powered by **ATL / CTL / TSB** (fitness, fatigue, form) over 12 months of history rather than a 30-day snapshot
+- **Cross-metric pattern analysis** — Paired sleep-HRV samples, training-recovery support, and schedule-regularity trends, with recorded association kept distinct from causation
+- **Multi-sport trend analysis** — Rank and analyze the sports actually present in the export, from walking and running to strength, cycling, boxing, swimming, yoga, and more
+- **Dedicated training report** — Describe training state, recovery support, load distribution, and sport-specific trends using a **42-day load baseline (CTL), 7-day recent load (ATL), and their load balance (TSB)**. These MET-minute estimates are not direct measures of fitness, fatigue, form, or readiness
 - **Behavioral pattern detection** — Weekend warrior, night owl drift, sleep compensation, recovery deficit
-- **Composite scoring** — Sleep/Recovery/Activity on a 0-100 scale, transparent and explainable algorithm
+- **No false-precision health score** — Avoid arbitrarily combining heterogeneous sleep, recovery, and activity records; show personal trends, sample coverage, and data gaps directly
 - **Bilingual** — Automatically generates Chinese or English reports based on user language
-- **Privacy first** — Runs entirely locally, no external APIs, no data uploads
+- **Privacy-conscious pipeline** — Raw ZIP/XML parsing and rendering stay local with no telemetry. If a hosted AI model writes the narrative, the structured JSON may be processed by that provider; see [PRIVACY.md](./PRIVACY.md)
 - **Offline HTML report** — Single file with inline CSS + SVG charts, just double-click to open
+- **Readable long-range charts** — Each chart uses one daily, weekly, or monthly resolution chosen from its full time span, with real-time ticks and density-aware markers
 
 ## Exporting Apple Health Data
 
@@ -54,14 +53,17 @@ Analyze my Apple Health export at /path/to/export.zip
 ```text
 Only generate the health report
 Only generate the training report
-Focus on my boxing training status  (training-only)
+Only generate the training report and prioritize boxing
 ```
+
+Naming a sport without saying “only” still produces both reports and prioritizes
+that sport in the training narrative. Boxing is an example, not a special mode.
 
 The skill activates automatically when you mention Apple Health analysis. You can also invoke it explicitly — `/apple-health-analyst` in Claude Code, or `$apple-health-analyst` in Codex.
 
 The agent automatically completes the full **prepare → LLM narrative → render** pipeline. The two HTMLs (`report.html` and `training.report.html`) are cross-linked via a topbar button, so you can jump between them.
 
-> **Note:** This is an agent skill, not a standalone CLI tool. The `prepare` and `render` steps run locally, but the narrative step requires an LLM — so the full workflow must run inside an AI coding agent.
+> **Note:** The package provides a standalone CLI for deterministic `prepare` and `render` steps. The narrative JSON still requires an AI agent or a compatible manually authored file.
 
 Skill configuration is at [`.agents/skills/apple-health-analyst/`](https://github.com/RuochenLyu/apple-health-analyst/blob/main/.agents/skills/apple-health-analyst/SKILL.md), including role definition, analysis framework, and narrative schema.
 
@@ -81,6 +83,7 @@ Commands used under the hood by the Codex Skill. Usually no need to run manually
 ```bash
 # 1. prepare: Parse ZIP, generate structured data (--lang en for English, --lang zh for Chinese)
 #    Optional: --top-sports N to cap the training-report sport list (default 5).
+#    Optional: --from/--to use strict YYYY-MM-DD analysis boundaries.
 npx apple-health-analyst prepare /path/to/Export.zip --lang en --out ./output
 # Outputs summary.json + insights.json
 
@@ -115,8 +118,21 @@ npx apple-health-analyst render \
 
 ## Development
 
+Requires Node.js 22 or newer. Node.js 24 is the recommended local runtime.
+
 ```bash
 npm run dev -- prepare /path/to/Export.zip --lang en --out ./output  # Dev mode (tsx, no build needed)
 npm run build   # Compile
 npm test        # Test
+npm run check   # Clean build + full test suite
+npm run pack:check  # Verify the publish tarball contains a runnable CLI
+npm run demo:prepare  # Regenerate deterministic synthetic demo insights
+npm run docs:build    # Validate and render the bilingual public demo
 ```
+
+## Open source
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) before sending a change, especially
+the rule against committing real health data. Security issues should be
+reported privately according to [SECURITY.md](./SECURITY.md). Release notes are
+kept in [CHANGELOG.md](./CHANGELOG.md).

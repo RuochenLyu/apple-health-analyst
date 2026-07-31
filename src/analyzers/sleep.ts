@@ -83,7 +83,7 @@ export function analyzeSleep(
     deepPct: subtract(recentSummary.stagePct.deep, baselineSummary.stagePct.deep),
   };
 
-  const healthInsights = buildSleepHealthInsights(recentSummary, baselineSummary, delta, staged, t);
+  const healthInsights = buildSleepHealthInsights(recentSummary, delta, staged, t);
 
   const result: SleepAnalysis = {
     status: validNights.length > 0 ? "ok" : "insufficient_data",
@@ -117,7 +117,6 @@ export function analyzeSleep(
 
 function buildSleepHealthInsights(
   recent: SleepWindowSummary,
-  baseline: SleepWindowSummary,
   delta: SleepAnalysis["delta"],
   staged: boolean,
   t: SleepT,
@@ -132,9 +131,9 @@ function buildSleepHealthInsights(
     deepSleepAssessment: buildDeepSleepAssessment(recent.stagePct, staged, t),
     remSleepAssessment: buildRemSleepAssessment(recent.stagePct, staged, t),
     normalRangeAssessment: buildNormalRangeAssessment(recent, staged, t),
-    interpretation: buildInterpretation(recent, baseline, delta, staged, trend, t),
-    actionableAdvice: buildActionableAdvice(recent, delta, staged, trend, t),
-    doctorTalkingPoints: buildDoctorTalkingPoints(recent, delta, staged, t),
+    interpretation: buildInterpretation(recent, delta, trend, t),
+    actionableAdvice: buildActionableAdvice(recent, trend, t),
+    doctorTalkingPoints: buildDoctorTalkingPoints(recent, delta, t),
   };
 }
 
@@ -157,14 +156,7 @@ function buildDeepSleepAssessment(
   if (!staged || stagePct.deep === null) {
     return t.deepSleepNoData;
   }
-  const deep = stagePct.deep;
-  if (deep >= 13 && deep <= 23) {
-    return t.deepSleepNormal(deep);
-  }
-  if (deep < 13) {
-    return t.deepSleepLow(deep);
-  }
-  return t.deepSleepHigh(deep);
+  return t.deepSleepObserved(stagePct.deep);
 }
 
 function buildRemSleepAssessment(
@@ -175,14 +167,7 @@ function buildRemSleepAssessment(
   if (!staged || stagePct.rem === null) {
     return t.remSleepNoData;
   }
-  const rem = stagePct.rem;
-  if (rem >= 20 && rem <= 25) {
-    return t.remSleepNormal(rem);
-  }
-  if (rem < 20) {
-    return t.remSleepLow(rem);
-  }
-  return t.remSleepHigh(rem);
+  return t.remSleepObserved(stagePct.rem);
 }
 
 function buildNormalRangeAssessment(
@@ -196,49 +181,19 @@ function buildNormalRangeAssessment(
   // Total sleep
   const avg = recent.avgSleepHours;
   if (avg !== null) {
-    if (avg >= 7 && avg <= 9) {
-      parts.push(t.avgSleepNormal(avg));
-    } else if (avg >= 6 && avg < 7) {
-      parts.push(t.avgSleepSlightlyLow(avg));
-    } else if (avg < 6) {
-      parts.push(t.avgSleepVeryLow(avg));
-    } else {
-      parts.push(t.avgSleepHigh(avg));
-    }
+    parts.push(t.avgSleepObserved(avg));
   }
 
-  // Deep sleep
-  if (staged && recent.stagePct.deep !== null) {
-    const deep = recent.stagePct.deep;
-    if (deep >= 13 && deep <= 23) {
-      parts.push(t.deepSleepInRange(deep));
-    } else if (deep < 13) {
-      parts.push(t.deepSleepOutOfRangeLow(deep));
-    } else {
-      parts.push(t.deepSleepOutOfRangeHigh(deep));
-    }
-  }
-
-  // REM
-  if (staged && recent.stagePct.rem !== null) {
-    const rem = recent.stagePct.rem;
-    if (rem >= 20 && rem <= 25) {
-      parts.push(t.remSleepInRange(rem));
-    } else if (rem < 20) {
-      parts.push(t.remSleepOutOfRangeLow(rem));
-    } else {
-      parts.push(t.remSleepOutOfRangeHigh(rem));
-    }
+  // Consumer sleep stages are algorithmic labels, not clinical measurements.
+  // Surface the recorded values without assigning universal normal/abnormal
+  // categories; the report's useful comparison is the person's own trend.
+  if (staged && (recent.stagePct.deep !== null || recent.stagePct.rem !== null)) {
+    parts.push(t.sleepStagesObserved(recent.stagePct.deep, recent.stagePct.rem));
   }
 
   // Bedtime
   if (recent.medianBedtime) {
-    const hour = parseInt(recent.medianBedtime.split(":")[0], 10);
-    if (hour >= 21 && hour <= 23) {
-      parts.push(t.bedtimeIdeal(recent.medianBedtime));
-    } else if (hour >= 0 && hour <= 2) {
-      parts.push(t.bedtimeLate(recent.medianBedtime));
-    }
+    parts.push(t.bedtimeObserved(recent.medianBedtime));
   }
 
   return parts.length > 0 ? parts.join(t.partSep) + t.partEnd : t.normalRangeInsufficientData;
@@ -246,9 +201,7 @@ function buildNormalRangeAssessment(
 
 function buildInterpretation(
   recent: SleepWindowSummary,
-  baseline: SleepWindowSummary,
   delta: SleepAnalysis["delta"],
-  staged: boolean,
   trend: SleepHealthInsights["sleepTrend"],
   t: SleepT,
 ): string {
@@ -256,17 +209,8 @@ function buildInterpretation(
   const parts: string[] = [];
 
   const avg = recent.avgSleepHours;
-  // Overall signal
-  if (avg !== null && avg >= 7 && avg <= 9) {
-    if (staged && recent.stagePct.deep !== null && recent.stagePct.deep >= 13) {
-      parts.push(t.overallHealthyWithDeep);
-    } else {
-      parts.push(t.overallDurationOk);
-    }
-  } else if (avg !== null && avg < 7) {
-    parts.push(t.overallDurationLow);
-  } else if (avg !== null && avg > 9) {
-    parts.push(t.overallDurationHigh);
+  if (avg !== null) {
+    parts.push(t.durationContext(avg));
   }
 
   // Trend
@@ -278,42 +222,19 @@ function buildInterpretation(
     parts.push(t.trendStable);
   }
 
-  // Stage composition
-  if (staged) {
-    const deep = recent.stagePct.deep;
-    const rem = recent.stagePct.rem;
-    if (deep !== null && deep < 13 && rem !== null && rem < 20) {
-      parts.push(t.stagesBothLow);
-    } else if (deep !== null && deep < 13) {
-      parts.push(t.stagesDeepLow);
-    } else if (rem !== null && rem < 20) {
-      parts.push(t.stagesRemLow);
-    }
-  }
-
   return parts.length > 0 ? parts.join(t.sentSep) + t.partEnd : "";
 }
 
 function buildActionableAdvice(
   recent: SleepWindowSummary,
-  delta: SleepAnalysis["delta"],
-  staged: boolean,
   trend: SleepHealthInsights["sleepTrend"],
   t: SleepT,
 ): string[] {
   const advice: string[] = [];
 
   const avg = recent.avgSleepHours;
-  if (avg !== null && avg < 7) {
+  if (avg !== null && avg < 6) {
     advice.push(t.adviceSleepMore);
-  }
-
-  if (staged && recent.stagePct.deep !== null && recent.stagePct.deep < 13) {
-    advice.push(t.adviceDeepSleep);
-  }
-
-  if (staged && recent.stagePct.rem !== null && recent.stagePct.rem < 20) {
-    advice.push(t.adviceRemSleep);
   }
 
   if (trend === "declining") {
@@ -338,7 +259,6 @@ function buildActionableAdvice(
 function buildDoctorTalkingPoints(
   recent: SleepWindowSummary,
   delta: SleepAnalysis["delta"],
-  staged: boolean,
   t: SleepT,
 ): string[] {
   const points: string[] = [];
@@ -348,27 +268,8 @@ function buildDoctorTalkingPoints(
     points.push(t.doctorLowSleep(avg));
   }
 
-  if (staged && recent.stagePct.deep !== null && recent.stagePct.deep < 10) {
-    points.push(t.doctorLowDeep(recent.stagePct.deep));
-  }
-
   if (delta.sleepHours !== null && delta.sleepHours <= -1) {
     points.push(t.doctorDeclining(Math.abs(delta.sleepHours)));
-  }
-
-  if (avg !== null && avg > 9) {
-    points.push(t.doctorLongSleep(avg));
-  }
-
-  if (recent.medianBedtime && recent.medianWakeTime) {
-    const bedHour = parseInt(recent.medianBedtime.split(":")[0], 10);
-    if (bedHour >= 2 && bedHour <= 5) {
-      points.push(t.doctorLateBedtime(recent.medianBedtime));
-    }
-  }
-
-  if (points.length === 0) {
-    points.push(t.doctorNormal);
   }
 
   return points;

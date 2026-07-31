@@ -47,6 +47,32 @@ describe("cli", () => {
     expect(summary.input.to).toBe("2026-03-26");
   });
 
+  it("rejects unsupported locale and malformed sport limits", async () => {
+    const outDir = await mkdtemp(path.join(os.tmpdir(), "apple-health-analyst-"));
+
+    await expect(
+      runCli([
+        "prepare",
+        fixturePath("minimal-export"),
+        "--lang",
+        "fr",
+        "--out",
+        outDir,
+      ]),
+    ).rejects.toThrow(/Expected zh or en/);
+
+    await expect(
+      runCli([
+        "prepare",
+        fixturePath("minimal-export"),
+        "--top-sports",
+        "2abc",
+        "--out",
+        outDir,
+      ]),
+    ).rejects.toThrow(/integer from 1 to 8/);
+  });
+
   it("renders health and training reports into the same output directory", async () => {
     const prepared = await prepareAnalysis(fixturePath("multi-source-export"), {}, zhTranslations);
     const outDir = await mkdtemp(path.join(os.tmpdir(), "apple-health-analyst-render-"));
@@ -59,7 +85,7 @@ describe("cli", () => {
     await writeFile(
       healthNarrativePath,
       JSON.stringify({
-        schema_version: "2.0.0",
+        schema_version: "3.0.0",
         health_assessment: "测试健康评估。",
         cross_metric_insights: ["测试跨指标分析。"],
         behavioral_patterns: ["测试行为模式。"],
@@ -82,7 +108,7 @@ describe("cli", () => {
     await writeFile(
       trainingNarrativePath,
       JSON.stringify({
-        schema_version: "1.0.0",
+        schema_version: "2.0.0",
         training_assessment: "测试训练评估。",
         overall_findings: ["测试训练发现。"],
         sport_sections: prepared.insights.training.sports.map((sport) => ({
@@ -154,7 +180,7 @@ describe("cli", () => {
     await writeFile(
       narrativePath,
       JSON.stringify({
-        schema_version: "2.0.0",
+        schema_version: "3.0.0",
         health_assessment: "测试健康评估。",
         cross_metric_insights: ["测试跨指标分析。"],
         behavioral_patterns: ["测试行为模式。"],

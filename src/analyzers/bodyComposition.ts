@@ -9,6 +9,7 @@ import type {
 import type { BodyCompositionT } from "../i18n/zh/bodyComposition.js";
 
 import { round, average } from "./mathUtils.js";
+import { isWithinWindow } from "../normalize/buildTimeWindow.js";
 
 function uniqueDays(records: QuantitySample[]): number {
   return new Set(records.map((record) => record.startDate.toISOString().slice(0, 10))).size;
@@ -72,7 +73,7 @@ export function analyzeBodyComposition(
       .map((metric) => {
         const sourceName = sourceNames[metric];
         const records = (recordsByMetric[metric] ?? []).filter((record) =>
-          window.effectiveStart ? record.startDate >= window.effectiveStart : true,
+          isWithinWindow(record.startDate, window),
         );
 
         if (!sourceName || records.length === 0) {

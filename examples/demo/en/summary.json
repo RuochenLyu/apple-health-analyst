@@ -1,0 +1,430 @@
+{
+  "metadata": {
+    "tool": "apple-health-analyst",
+    "version": "2.0.0",
+    "generatedAt": "2026-06-30T23:59:59.000Z"
+  },
+  "input": {
+    "zipPath": "export.zip",
+    "mainXmlEntry": "apple_health_export/export.xml",
+    "from": null,
+    "to": null,
+    "exportDate": "2026-06-30T23:59:59.000Z",
+    "locale": "en_US"
+  },
+  "coverage": {
+    "recordCount": 2355,
+    "workoutCount": 234,
+    "activitySummaryCount": 420,
+    "earliestSeen": "2025-05-07T00:00:00.000Z",
+    "latestSeen": "2026-07-01T06:12:00.000Z",
+    "windowStart": null,
+    "windowEnd": "2026-06-30T23:59:59.000Z",
+    "excludedInvalidTimestampSamples": 0,
+    "excludedImplausibleActivitySummaries": 0,
+    "excludedUnsupportedUnitValues": 0,
+    "deduplicatedWorkoutRecords": 0
+  },
+  "sources": {
+    "discovered": [
+      {
+        "canonicalName": "sample watch",
+        "displayName": "Sample Watch",
+        "rawNames": [
+          "Sample Watch"
+        ],
+        "recordCount": 2355,
+        "workoutCount": 234,
+        "metricCounts": {
+          "sleep": 1680,
+          "restingHeartRate": 210,
+          "hrv": 210,
+          "oxygenSaturation": 60,
+          "respiratoryRate": 60,
+          "vo2Max": 15,
+          "bodyMass": 60,
+          "bodyFatPercentage": 60
+        }
+      }
+    ],
+    "primary": {
+      "sleep": "Sample Watch",
+      "recovery": {
+        "restingHeartRate": "Sample Watch",
+        "hrv": "Sample Watch",
+        "oxygenSaturation": "Sample Watch",
+        "respiratoryRate": "Sample Watch",
+        "vo2Max": "Sample Watch"
+      },
+      "bodyComposition": {
+        "bodyMass": "Sample Watch",
+        "bodyFatPercentage": "Sample Watch"
+      },
+      "activity": "Activity Summaries + Workout Records"
+    }
+  },
+  "warnings": [
+    {
+      "code": "partial_sleep_night",
+      "module": "sleep",
+      "message": "Excluded 2026-06-30 from sleep trends as it contains only 1.33 hours of sleep."
+    },
+    {
+      "code": "recovery_note",
+      "module": "recovery",
+      "message": "Recovery metrics are reported per their primary data source and are not merged across devices."
+    },
+    {
+      "code": "activity_note",
+      "module": "activity",
+      "message": "Daily activity trends come from activity summaries; workout types are counted separately."
+    },
+    {
+      "code": "body_note",
+      "module": "bodyComposition",
+      "message": "Body composition trends are based on the most stable recent scale data source."
+    }
+  ],
+  "sleep": {
+    "status": "ok",
+    "source": "Sample Watch",
+    "coverageDays": 419,
+    "sampleCount": 1677,
+    "staged": true,
+    "recent30d": {
+      "nights": 29,
+      "avgSleepHours": 7.14,
+      "avgAwakeHours": 0.26,
+      "medianBedtime": "22:33",
+      "medianWakeTime": "05:58",
+      "stagePct": {
+        "core": 52.99,
+        "rem": 23.96,
+        "deep": 23.05,
+        "unspecified": 0
+      }
+    },
+    "baseline90d": {
+      "nights": 90,
+      "avgSleepHours": 7.58,
+      "avgAwakeHours": 0.26,
+      "medianBedtime": "22:58",
+      "medianWakeTime": "06:51",
+      "stagePct": {
+        "core": 53,
+        "rem": 24.01,
+        "deep": 22.99,
+        "unspecified": 0
+      }
+    },
+    "delta": {
+      "sleepHours": -0.44,
+      "awakeHours": 0,
+      "corePct": -0.01,
+      "remPct": -0.05,
+      "deepPct": 0.06
+    },
+    "partialNights": [
+      {
+        "date": "2026-06-30",
+        "totalSleepHours": 1.33
+      }
+    ],
+    "healthInsights": {
+      "sleepTrend": "stable",
+      "sleepTrendDelta": -0.44,
+      "deepSleepAssessment": "Device-estimated deep sleep is 23.05%. This is an algorithmic classification best used for personal long-term trends, not to determine recovery quality or a sleep disorder.",
+      "remSleepAssessment": "Device-estimated REM sleep is 23.96%. This is an algorithmic classification; use your own long-term trend rather than inferring a cause from one proportion.",
+      "normalRangeAssessment": "Recorded sleep averaged 7.14 hours over the last 30 days; whether that is sufficient depends on personal needs, daytime function, and the longer-term baseline; device-estimated deep sleep 23.05% and REM 23.96%; stage proportions are only used for personal trend observation; median bedtime 22:33; whether it fits depends on wake time, total sleep, regularity, and your schedule.",
+      "interpretation": "Recorded sleep averaged 7.14 hours over the last 30 days; this report does not use one fixed range to decide whether it is right for an individual. Recent sleep duration remains stable compared to baseline, with no significant fluctuation.",
+      "actionableAdvice": [
+        "Current sleep records are relatively stable. Continue a schedule that works for you and a comfortable sleep environment.",
+        "Aim for a reasonably consistent wake time that fits your life, including weekends; make changes gradually when needed."
+      ],
+      "doctorTalkingPoints": []
+    },
+    "notes": [
+      "Sleep stage percentages are calculated based on the selected primary sleep data source only."
+    ]
+  },
+  "recovery": {
+    "status": "ok",
+    "sources": {
+      "restingHeartRate": "Sample Watch",
+      "hrv": "Sample Watch",
+      "oxygenSaturation": "Sample Watch",
+      "respiratoryRate": "Sample Watch",
+      "vo2Max": "Sample Watch"
+    },
+    "metrics": {
+      "restingHeartRate": {
+        "unit": "bpm",
+        "source": "Sample Watch",
+        "coverageDays": 210,
+        "sampleCount": 210,
+        "recent30d": {
+          "sampleCount": 15,
+          "average": 60.08
+        },
+        "baseline90d": {
+          "sampleCount": 45,
+          "average": 58.64
+        },
+        "delta": 1.44,
+        "latest": {
+          "timestamp": "2026-06-29T07:30:00.000Z",
+          "value": 59
+        }
+      },
+      "hrv": {
+        "unit": "ms",
+        "source": "Sample Watch",
+        "coverageDays": 210,
+        "sampleCount": 210,
+        "recent30d": {
+          "sampleCount": 15,
+          "average": 47.56
+        },
+        "baseline90d": {
+          "sampleCount": 45,
+          "average": 42.71
+        },
+        "delta": 4.85,
+        "latest": {
+          "timestamp": "2026-06-29T07:35:00.000Z",
+          "value": 46.1
+        }
+      },
+      "oxygenSaturation": {
+        "unit": "%",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 96.23
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 96.35
+        },
+        "delta": -0.12,
+        "latest": {
+          "timestamp": "2026-06-24T07:40:00.000Z",
+          "value": 96.6
+        }
+      },
+      "respiratoryRate": {
+        "unit": "breaths/min",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 15.88
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 15.18
+        },
+        "delta": 0.69,
+        "latest": {
+          "timestamp": "2026-06-24T07:45:00.000Z",
+          "value": 15.7
+        }
+      },
+      "vo2Max": {
+        "unit": "mL/kg/min",
+        "source": "Sample Watch",
+        "coverageDays": 15,
+        "sampleCount": 15,
+        "recent30d": {
+          "sampleCount": 1,
+          "average": 43.4
+        },
+        "baseline90d": {
+          "sampleCount": 3,
+          "average": 42.73
+        },
+        "delta": 0.67,
+        "latest": {
+          "timestamp": "2026-06-03T07:50:00.000Z",
+          "value": 43.4
+        }
+      }
+    },
+    "healthInsights": {
+      "rhrTrend": "stable",
+      "hrvTrend": "improving",
+      "spo2Assessment": "Recent device-recorded average SpO2 is 96.23%. A consumer-device reading cannot confirm lung function or rule out disease; the repeated trend is more useful than one reading.",
+      "normalRangeAssessment": "Resting heart rate averaged 60.08 bpm over the last 30 days, +1.44 bpm versus the personal baseline; interpret it primarily through personal trends, symptoms, and measurement conditions; HRV average 47.56 ms - HRV varies greatly between individuals, so absolute values have limited reference value; trend changes are more important to monitor; Device-recorded SpO2 96.23%, within a common reference range; a consumer device is not diagnostic; Device-recorded respiratory rate averaged 15.88 breaths/min, +0.69 breaths/min versus the personal baseline; the export does not establish measurement context, so this report does not assign a universal resting category; VO2 Max 43.4 mL/kg/min; this report lacks reliable age- and sex-specific context, so it does not assign a high/low category.",
+      "interpretation": "Recovery metrics are available; baseline data is still accumulating and trend assessments will become more reliable over time.",
+      "actionableAdvice": [
+        "Current recovery metrics are relatively stable. Whether to maintain the current exercise plan should also depend on fatigue, pain, and training goals.",
+        "Measure at the same time each day (e.g., right after waking) to make trend comparisons more reliable."
+      ],
+      "doctorTalkingPoints": []
+    },
+    "notes": [
+      "Recovery metrics are reported per their primary data source and are not merged across devices."
+    ]
+  },
+  "activity": {
+    "status": "ok",
+    "source": "Activity Summaries + Workout Records",
+    "coverageDays": 420,
+    "recent30d": {
+      "dayCount": 30,
+      "activeEnergyBurnedKcal": 357.1,
+      "exerciseMinutes": 20,
+      "standHours": 10.57,
+      "workouts": 13,
+      "topWorkoutTypes": [
+        {
+          "type": "HKWorkoutActivityTypeWalking",
+          "label": "Walking",
+          "count": 5,
+          "totalDurationMinutes": 235,
+          "averageDurationMinutes": 47
+        },
+        {
+          "type": "HKWorkoutActivityTypeTraditionalStrengthTraining",
+          "label": "Traditional Strength Training",
+          "count": 4,
+          "totalDurationMinutes": 206,
+          "averageDurationMinutes": 51.5
+        },
+        {
+          "type": "HKWorkoutActivityTypeRunning",
+          "label": "Running",
+          "count": 4,
+          "totalDurationMinutes": 164,
+          "averageDurationMinutes": 41
+        }
+      ]
+    },
+    "baseline90d": {
+      "dayCount": 90,
+      "activeEnergyBurnedKcal": 324.19,
+      "exerciseMinutes": 24.17,
+      "standHours": 10.48,
+      "workouts": 49,
+      "topWorkoutTypes": [
+        {
+          "type": "HKWorkoutActivityTypeTraditionalStrengthTraining",
+          "label": "Traditional Strength Training",
+          "count": 13,
+          "totalDurationMinutes": 686,
+          "averageDurationMinutes": 52.77
+        },
+        {
+          "type": "HKWorkoutActivityTypeWalking",
+          "label": "Walking",
+          "count": 13,
+          "totalDurationMinutes": 584,
+          "averageDurationMinutes": 44.92
+        },
+        {
+          "type": "HKWorkoutActivityTypeRunning",
+          "label": "Running",
+          "count": 13,
+          "totalDurationMinutes": 520,
+          "averageDurationMinutes": 40
+        },
+        {
+          "type": "HKWorkoutActivityTypeCycling",
+          "label": "Cycling",
+          "count": 5,
+          "totalDurationMinutes": 310,
+          "averageDurationMinutes": 62
+        },
+        {
+          "type": "HKWorkoutActivityTypeYoga",
+          "label": "Yoga",
+          "count": 5,
+          "totalDurationMinutes": 208,
+          "averageDurationMinutes": 41.6
+        }
+      ]
+    },
+    "delta": {
+      "activeEnergyBurnedKcal": 32.91,
+      "exerciseMinutes": -4.17,
+      "standHours": 0.09,
+      "workouts": -3.33
+    },
+    "healthInsights": {
+      "activityTrend": "stable",
+      "activityTrendDelta": -4.17,
+      "whoGuidelineAssessment": "Apple Exercise Time extrapolates to about 140 min/week. This field does not fully establish intensity or unrecorded activity, so it cannot determine a gap to WHO guidance or generate an exercise prescription.",
+      "workoutVariety": "Recent records contain multiple activity types (Walking;Traditional Strength Training;Running). Variety describes the mix; it does not by itself establish balanced training or lower injury risk.",
+      "normalRangeAssessment": "Apple Exercise Time averages 20 min/day (about 140 min/week extrapolated); it supports personal trend review but is not the same as intensity-classified activity minutes; About 10.57 hours/day meet Apple's “Stand Hour” condition; this is not total time spent standing; Daily active energy 357.1 kcal.",
+      "interpretation": "Apple Exercise Time can support personal activity trends but cannot determine compliance with public-health guidance on its own. Exercise volume remains stable — consistency is key to long-term benefits.",
+      "actionableAdvice": [
+        "Recorded exercise rhythm is relatively stable; whether to maintain or change the mix should depend on goals, fatigue, and pain.",
+        "Continue recording workouts with the device or app you already use to follow personal trends; include activity type, intensity, fatigue, and pain when interpreting them."
+      ],
+      "doctorTalkingPoints": []
+    },
+    "notes": [
+      "Daily activity trends come from activity summaries; workout types are counted separately."
+    ]
+  },
+  "bodyComposition": {
+    "status": "ok",
+    "sources": {
+      "bodyMass": "Sample Watch",
+      "bodyFatPercentage": "Sample Watch"
+    },
+    "metrics": {
+      "bodyMass": {
+        "unit": "kg",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 72.38
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 72.15
+        },
+        "delta": 0.23,
+        "latest": {
+          "timestamp": "2026-06-24T07:15:00.000Z",
+          "value": 72.4
+        }
+      },
+      "bodyFatPercentage": {
+        "unit": "%",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 17.68
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 17.76
+        },
+        "delta": -0.09,
+        "latest": {
+          "timestamp": "2026-06-24T07:16:00.000Z",
+          "value": 17.7
+        }
+      }
+    },
+    "notes": [
+      "Body composition trends are based on the most stable recent scale data source."
+    ]
+  },
+  "attachments": {
+    "ecgFiles": 0,
+    "workoutRouteFiles": 0,
+    "imageAttachments": 0,
+    "otherFiles": 0,
+    "exampleFiles": []
+  }
+}

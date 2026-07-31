@@ -1,5 +1,5 @@
 export const PACKAGE_NAME = "apple-health-analyst";
-export const PACKAGE_VERSION = "1.2.0";
+export const PACKAGE_VERSION = "2.0.0";
 export const RECENT_DAYS = 30;
 export const BASELINE_DAYS = 90;
 
@@ -29,6 +29,9 @@ export interface BaseSample {
   canonicalSource: string;
   startDate: Date;
   endDate: Date;
+  /** Offset encoded in the HealthKit timestamp, used for local calendar semantics. */
+  startTimezoneOffsetMinutes?: number;
+  endTimezoneOffsetMinutes?: number;
 }
 
 export interface SleepSample extends BaseSample {
@@ -64,6 +67,8 @@ export interface WorkoutSample {
   durationMinutes: number | null;
   startDate: Date;
   endDate: Date;
+  startTimezoneOffsetMinutes?: number;
+  endTimezoneOffsetMinutes?: number;
   activeEnergyBurnedKcal: number | null;
   basalEnergyBurnedKcal: number | null;
   distanceKm: number | null;
@@ -98,6 +103,17 @@ export interface SourceSummary {
   metricCounts: Partial<Record<MetricKey, number>>;
 }
 
+export interface ParseDataQuality {
+  /** Samples dropped because their timestamp was missing, invalid, or reversed. */
+  excludedInvalidTimestampSamples: number;
+  /** Activity summaries before the HealthKit/Activity era, commonly Unix-epoch sentinels. */
+  excludedImplausibleActivitySummaries: number;
+  /** Values dropped because their unit could not be normalized safely. */
+  excludedUnsupportedUnitValues: number;
+  /** Near-identical cross-source workout records removed before analysis. */
+  deduplicatedWorkoutRecords: number;
+}
+
 export type BiologicalSex = "female" | "male" | "other" | null;
 
 export interface ParsedHealthExport {
@@ -106,6 +122,7 @@ export interface ParsedHealthExport {
   locale: string | null;
   biologicalSex: BiologicalSex;
   exportDate: Date | null;
+  exportTimezoneOffsetMinutes?: number;
   coverageStart: Date | null;
   coverageEnd: Date | null;
   recordCount: number;
@@ -128,6 +145,7 @@ export interface ParsedHealthExport {
   intermenstrualBleeding: IntermenstrualBleedingSample[];
   contraceptive: ContraceptiveSample[];
   attachments: AttachmentSummary;
+  dataQuality?: ParseDataQuality;
 }
 
 export interface TimeWindow {
@@ -137,6 +155,8 @@ export interface TimeWindow {
   effectiveEnd: Date;
   recentStart: Date;
   baselineStart: Date;
+  /** Fixed offset from the export timestamp used to interpret CLI calendar dates. */
+  calendarOffsetMinutes?: number;
 }
 
 export interface SelectedSource {
@@ -145,10 +165,14 @@ export interface SelectedSource {
   rawNames: string[];
   recentSampleCount: number;
   totalSampleCount: number;
+  /** Samples inside the explicit analysis window. */
+  windowSampleCount?: number;
+  /** Distinct UTC calendar days represented inside the analysis window. */
+  windowCoverageDays?: number;
 }
 
 export interface PrimarySources {
-  sleep: (SelectedSource & { staged: boolean; recentNightCount: number }) | null;
+  sleep: (SelectedSource & { staged: boolean; recentNightCount: number; windowNightCount?: number }) | null;
   recovery: Partial<Record<RecoveryMetricKey, SelectedSource>>;
   bodyComposition: Partial<Record<BodyMetricKey, SelectedSource>>;
   activity: string;
@@ -366,6 +390,10 @@ export interface AnalysisSummary {
     latestSeen: string | null;
     windowStart: string | null;
     windowEnd: string;
+    excludedInvalidTimestampSamples?: number;
+    excludedImplausibleActivitySummaries?: number;
+    excludedUnsupportedUnitValues?: number;
+    deduplicatedWorkoutRecords?: number;
   };
   sources: {
     discovered: SourceSummary[];
@@ -385,9 +413,9 @@ export interface AnalysisSummary {
   attachments: AttachmentSummary;
 }
 
-export const INSIGHT_SCHEMA_VERSION = "2.3.0";
-export const NARRATIVE_REPORT_SCHEMA_VERSION = "2.0.0";
-export const TRAINING_NARRATIVE_REPORT_SCHEMA_VERSION = "1.0.0";
+export const INSIGHT_SCHEMA_VERSION = "3.0.0";
+export const NARRATIVE_REPORT_SCHEMA_VERSION = "3.0.0";
+export const TRAINING_NARRATIVE_REPORT_SCHEMA_VERSION = "2.0.0";
 
 export type ChartGranularity = "day" | "week" | "month";
 export type ChartVisual = "line" | "bar" | "area";
@@ -608,7 +636,11 @@ export type TrainingState =
 
 export type TrainingReadiness = "good" | "moderate" | "low" | "insufficient_data";
 export type TrainingLoadTag = "load rising" | "load stable" | "load falling";
-export type TrainingRecoveryTag = "recovery supported" | "recovery unsupported";
+export type TrainingRecoveryTag =
+  | "recovery supported"
+  | "recovery mixed"
+  | "recovery concern"
+  | "recovery unknown";
 export type TrainingConsistencyTag = "consistency good" | "consistency uneven";
 export type TrainingFrequencyTrend = "denser" | "stable" | "sparser" | null;
 
@@ -627,7 +659,17 @@ export interface TrainingConsistencySummary {
 }
 
 export interface TrainingRecoveryAfterWorkout {
+  /** Maximum available count retained for schema compatibility. */
   sampleCount: number;
+  sleepSampleCount: number;
+  hrvSampleCount: number;
+  restingHeartRateSampleCount: number;
+  sleepComparatorSampleCount: number;
+  hrvComparatorSampleCount: number;
+  restingHeartRateComparatorSampleCount: number;
+  comparator: "other_observed_days";
+  comparisonWindowStart: string;
+  comparisonWindowEnd: string;
   nextDaySleepHoursDelta: number | null;
   nextDayHrvDelta: number | null;
   nextDayRestingHeartRateDelta: number | null;

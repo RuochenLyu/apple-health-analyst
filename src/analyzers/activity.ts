@@ -133,8 +133,8 @@ function buildActivityHealthInsights(
     workoutVariety: buildWorkoutVariety(recent.topWorkoutTypes, t),
     normalRangeAssessment: buildNormalRangeAssessment(recent, t),
     interpretation: buildInterpretation(recent, delta, trend, t),
-    actionableAdvice: buildActionableAdvice(recent, delta, trend, t),
-    doctorTalkingPoints: buildDoctorTalkingPoints(recent, t),
+    actionableAdvice: buildActionableAdvice(recent, trend, t),
+    doctorTalkingPoints: [],
   };
 }
 
@@ -152,16 +152,7 @@ function buildActivityTrend(
 function buildWhoGuidelineAssessment(exerciseMinutes: number | null, t: ActivityT): string {
   if (exerciseMinutes === null) return t.whoNoData;
   const weeklyMinutes = round(exerciseMinutes * 7) ?? 0;
-  if (weeklyMinutes >= 300) {
-    return t.whoExceeds(weeklyMinutes);
-  }
-  if (weeklyMinutes >= 150) {
-    return t.whoMeets(weeklyMinutes);
-  }
-  if (weeklyMinutes >= 75) {
-    return t.whoPartial(weeklyMinutes, 150 - weeklyMinutes);
-  }
-  return t.whoFarBelow(weeklyMinutes);
+  return t.exerciseGuidelineContext(weeklyMinutes);
 }
 
 function buildWorkoutVariety(
@@ -191,11 +182,7 @@ function buildNormalRangeAssessment(recent: ActivityWindowSummary, t: ActivityT)
 
   if (recent.exerciseMinutes !== null) {
     const weeklyMin = round(recent.exerciseMinutes * 7) ?? 0;
-    if (weeklyMin >= 150) {
-      parts.push(t.exerciseMeetsWho(recent.exerciseMinutes, weeklyMin));
-    } else {
-      parts.push(t.exerciseBelowWho(recent.exerciseMinutes, weeklyMin));
-    }
+    parts.push(t.exerciseRecorded(recent.exerciseMinutes, weeklyMin));
   }
 
   if (recent.standHours !== null) {
@@ -224,12 +211,8 @@ function buildInterpretation(
   if (recent.dayCount === 0 && recent.workouts === 0) return t.interpretationInsufficientData;
   const parts: string[] = [];
 
-  // WHO compliance
-  const weeklyMin = recent.exerciseMinutes !== null ? (round(recent.exerciseMinutes * 7) ?? 0) : 0;
-  if (weeklyMin >= 150) {
-    parts.push(t.whoComplianceMet);
-  } else if (weeklyMin > 0) {
-    parts.push(t.whoCompliancePartial);
+  if (recent.exerciseMinutes !== null) {
+    parts.push(t.exerciseInterpretation);
   }
 
   // Trend
@@ -251,18 +234,10 @@ function buildInterpretation(
 
 function buildActionableAdvice(
   recent: ActivityWindowSummary,
-  delta: ActivityAnalysis["delta"],
   trend: ActivityHealthInsights["activityTrend"],
   t: ActivityT,
 ): string[] {
   const advice: string[] = [];
-
-  const weeklyMin = recent.exerciseMinutes !== null ? (round(recent.exerciseMinutes * 7) ?? 0) : 0;
-  if (weeklyMin < 150) {
-    const gap = 150 - weeklyMin;
-    const dailyGap = round(gap / 7);
-    advice.push(t.adviceWhoGap(gap, dailyGap));
-  }
 
   if (recent.standHours !== null && recent.standHours < 8) {
     advice.push(t.adviceStandMore);
@@ -276,37 +251,10 @@ function buildActionableAdvice(
     advice.push(t.adviceCrossTrain);
   }
 
-  if (weeklyMin > 300) {
-    advice.push(t.adviceRecovery);
-  }
-
   if (advice.length === 0) {
     advice.push(t.adviceGood);
   }
   advice.push(t.adviceTrack);
 
   return advice;
-}
-
-function buildDoctorTalkingPoints(recent: ActivityWindowSummary, t: ActivityT): string[] {
-  const points: string[] = [];
-  const weeklyMin = recent.exerciseMinutes !== null ? (round(recent.exerciseMinutes * 7) ?? 0) : 0;
-
-  if (weeklyMin < 75) {
-    points.push(t.doctorLowActivity(weeklyMin));
-  }
-
-  if (weeklyMin > 400) {
-    points.push(t.doctorHighActivity(weeklyMin));
-  }
-
-  if (recent.standHours !== null && recent.standHours < 6) {
-    points.push(t.doctorSedentary(recent.standHours));
-  }
-
-  if (points.length === 0) {
-    points.push(t.doctorOptimize(weeklyMin));
-  }
-
-  return points;
 }

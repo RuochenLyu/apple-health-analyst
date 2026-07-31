@@ -1,0 +1,430 @@
+{
+  "metadata": {
+    "tool": "apple-health-analyst",
+    "version": "2.0.0",
+    "generatedAt": "2026-06-30T23:59:59.000Z"
+  },
+  "input": {
+    "zipPath": "export.zip",
+    "mainXmlEntry": "apple_health_export/export.xml",
+    "from": null,
+    "to": null,
+    "exportDate": "2026-06-30T23:59:59.000Z",
+    "locale": "en_US"
+  },
+  "coverage": {
+    "recordCount": 2355,
+    "workoutCount": 234,
+    "activitySummaryCount": 420,
+    "earliestSeen": "2025-05-07T00:00:00.000Z",
+    "latestSeen": "2026-07-01T06:12:00.000Z",
+    "windowStart": null,
+    "windowEnd": "2026-06-30T23:59:59.000Z",
+    "excludedInvalidTimestampSamples": 0,
+    "excludedImplausibleActivitySummaries": 0,
+    "excludedUnsupportedUnitValues": 0,
+    "deduplicatedWorkoutRecords": 0
+  },
+  "sources": {
+    "discovered": [
+      {
+        "canonicalName": "sample watch",
+        "displayName": "Sample Watch",
+        "rawNames": [
+          "Sample Watch"
+        ],
+        "recordCount": 2355,
+        "workoutCount": 234,
+        "metricCounts": {
+          "sleep": 1680,
+          "restingHeartRate": 210,
+          "hrv": 210,
+          "oxygenSaturation": 60,
+          "respiratoryRate": 60,
+          "vo2Max": 15,
+          "bodyMass": 60,
+          "bodyFatPercentage": 60
+        }
+      }
+    ],
+    "primary": {
+      "sleep": "Sample Watch",
+      "recovery": {
+        "restingHeartRate": "Sample Watch",
+        "hrv": "Sample Watch",
+        "oxygenSaturation": "Sample Watch",
+        "respiratoryRate": "Sample Watch",
+        "vo2Max": "Sample Watch"
+      },
+      "bodyComposition": {
+        "bodyMass": "Sample Watch",
+        "bodyFatPercentage": "Sample Watch"
+      },
+      "activity": "活动摘要 + 训练记录"
+    }
+  },
+  "warnings": [
+    {
+      "code": "partial_sleep_night",
+      "module": "sleep",
+      "message": "已将 2026-06-30 排除在睡眠趋势之外，因为该夜晚仅包含 1.33 小时睡眠。"
+    },
+    {
+      "code": "recovery_note",
+      "module": "recovery",
+      "message": "恢复指标按各自的主数据源汇报，不会跨设备合并。"
+    },
+    {
+      "code": "activity_note",
+      "module": "activity",
+      "message": "日常活动趋势来自活动摘要，训练类型单独统计。"
+    },
+    {
+      "code": "body_note",
+      "module": "bodyComposition",
+      "message": "身体成分趋势基于近期最稳定的体重秤数据源汇报。"
+    }
+  ],
+  "sleep": {
+    "status": "ok",
+    "source": "Sample Watch",
+    "coverageDays": 419,
+    "sampleCount": 1677,
+    "staged": true,
+    "recent30d": {
+      "nights": 29,
+      "avgSleepHours": 7.14,
+      "avgAwakeHours": 0.26,
+      "medianBedtime": "22:33",
+      "medianWakeTime": "05:58",
+      "stagePct": {
+        "core": 52.99,
+        "rem": 23.96,
+        "deep": 23.05,
+        "unspecified": 0
+      }
+    },
+    "baseline90d": {
+      "nights": 90,
+      "avgSleepHours": 7.58,
+      "avgAwakeHours": 0.26,
+      "medianBedtime": "22:58",
+      "medianWakeTime": "06:51",
+      "stagePct": {
+        "core": 53,
+        "rem": 24.01,
+        "deep": 22.99,
+        "unspecified": 0
+      }
+    },
+    "delta": {
+      "sleepHours": -0.44,
+      "awakeHours": 0,
+      "corePct": -0.01,
+      "remPct": -0.05,
+      "deepPct": 0.06
+    },
+    "partialNights": [
+      {
+        "date": "2026-06-30",
+        "totalSleepHours": 1.33
+      }
+    ],
+    "healthInsights": {
+      "sleepTrend": "stable",
+      "sleepTrendDelta": -0.44,
+      "deepSleepAssessment": "设备估算的深度睡眠占比为 23.05%；这是算法分类结果，更适合观察个人长期趋势，不能据此判断恢复质量或睡眠疾病。",
+      "remSleepAssessment": "设备估算的 REM 睡眠占比为 23.96%；这是算法分类结果，建议以个人长期趋势为主，不从单次比例推断原因。",
+      "normalRangeAssessment": "近 30 天平均记录睡眠 7.14 小时；是否足够应结合个人需求、白天状态和长期基线；设备估算深度睡眠 23.05%、REM 23.96%；阶段比例仅用于个人趋势观察；中位入睡时间 22:33；是否合适应结合起床时间、总睡眠、规律性和个人作息。",
+      "interpretation": "近 30 天平均记录睡眠 7.14 小时；本报告不按单一固定区间判断是否适合个人。近期睡眠时长与基线期保持稳定，没有明显波动。",
+      "actionableAdvice": [
+        "现有睡眠记录较稳定，可继续保持适合自己的规律作息和舒适睡眠环境。",
+        "尽量保持相对稳定且符合生活安排的起床时间，包括周末；若需要调整，可逐步进行。"
+      ],
+      "doctorTalkingPoints": []
+    },
+    "notes": [
+      "睡眠阶段占比仅基于选定的主睡眠数据源计算。"
+    ]
+  },
+  "recovery": {
+    "status": "ok",
+    "sources": {
+      "restingHeartRate": "Sample Watch",
+      "hrv": "Sample Watch",
+      "oxygenSaturation": "Sample Watch",
+      "respiratoryRate": "Sample Watch",
+      "vo2Max": "Sample Watch"
+    },
+    "metrics": {
+      "restingHeartRate": {
+        "unit": "bpm",
+        "source": "Sample Watch",
+        "coverageDays": 210,
+        "sampleCount": 210,
+        "recent30d": {
+          "sampleCount": 15,
+          "average": 60.08
+        },
+        "baseline90d": {
+          "sampleCount": 45,
+          "average": 58.64
+        },
+        "delta": 1.44,
+        "latest": {
+          "timestamp": "2026-06-29T07:30:00.000Z",
+          "value": 59
+        }
+      },
+      "hrv": {
+        "unit": "ms",
+        "source": "Sample Watch",
+        "coverageDays": 210,
+        "sampleCount": 210,
+        "recent30d": {
+          "sampleCount": 15,
+          "average": 47.56
+        },
+        "baseline90d": {
+          "sampleCount": 45,
+          "average": 42.71
+        },
+        "delta": 4.85,
+        "latest": {
+          "timestamp": "2026-06-29T07:35:00.000Z",
+          "value": 46.1
+        }
+      },
+      "oxygenSaturation": {
+        "unit": "%",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 96.23
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 96.35
+        },
+        "delta": -0.12,
+        "latest": {
+          "timestamp": "2026-06-24T07:40:00.000Z",
+          "value": 96.6
+        }
+      },
+      "respiratoryRate": {
+        "unit": "breaths/min",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 15.88
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 15.18
+        },
+        "delta": 0.69,
+        "latest": {
+          "timestamp": "2026-06-24T07:45:00.000Z",
+          "value": 15.7
+        }
+      },
+      "vo2Max": {
+        "unit": "mL/kg/min",
+        "source": "Sample Watch",
+        "coverageDays": 15,
+        "sampleCount": 15,
+        "recent30d": {
+          "sampleCount": 1,
+          "average": 43.4
+        },
+        "baseline90d": {
+          "sampleCount": 3,
+          "average": 42.73
+        },
+        "delta": 0.67,
+        "latest": {
+          "timestamp": "2026-06-03T07:50:00.000Z",
+          "value": 43.4
+        }
+      }
+    },
+    "healthInsights": {
+      "rhrTrend": "stable",
+      "hrvTrend": "improving",
+      "spo2Assessment": "近期设备记录的平均血氧为 96.23%。消费级设备读数不能用于确认肺部功能或排除疾病，趋势比单次读数更值得关注。",
+      "normalRangeAssessment": "近 30 天静息心率均值 60.08 bpm，较个人基线变化 +1.44 bpm；优先结合个人趋势、症状和测量条件解读；HRV 均值 47.56 ms——HRV 个体差异大，绝对值的参考意义有限，更重要的是观察趋势变化；设备记录血氧 96.23%，处于常见参考区间；消费级设备不能用于诊断；设备记录呼吸频率均值 15.88 次/分，较个人基线变化 +0.69 次/分；导出数据未说明测量场景，不按统一静息区间分级；VO2 Max 43.4 mL/kg/min；本报告缺少可靠的年龄与性别分层，不作高低分级，建议观察个人趋势。",
+      "interpretation": "恢复指标可用，基线数据正在积累中，后续趋势判断会更可靠。",
+      "actionableAdvice": [
+        "现有恢复指标相对稳定；是否维持当前运动安排，还应结合主观疲劳、疼痛和训练目标。",
+        "保持测量时间的一致性（如每天早起后测量），这能让趋势对比更可靠。"
+      ],
+      "doctorTalkingPoints": []
+    },
+    "notes": [
+      "恢复指标按各自的主数据源汇报，不会跨设备合并。"
+    ]
+  },
+  "activity": {
+    "status": "ok",
+    "source": "活动摘要 + 训练记录",
+    "coverageDays": 420,
+    "recent30d": {
+      "dayCount": 30,
+      "activeEnergyBurnedKcal": 357.1,
+      "exerciseMinutes": 20,
+      "standHours": 10.57,
+      "workouts": 13,
+      "topWorkoutTypes": [
+        {
+          "type": "HKWorkoutActivityTypeWalking",
+          "label": "步行",
+          "count": 5,
+          "totalDurationMinutes": 235,
+          "averageDurationMinutes": 47
+        },
+        {
+          "type": "HKWorkoutActivityTypeTraditionalStrengthTraining",
+          "label": "传统力量训练",
+          "count": 4,
+          "totalDurationMinutes": 206,
+          "averageDurationMinutes": 51.5
+        },
+        {
+          "type": "HKWorkoutActivityTypeRunning",
+          "label": "跑步",
+          "count": 4,
+          "totalDurationMinutes": 164,
+          "averageDurationMinutes": 41
+        }
+      ]
+    },
+    "baseline90d": {
+      "dayCount": 90,
+      "activeEnergyBurnedKcal": 324.19,
+      "exerciseMinutes": 24.17,
+      "standHours": 10.48,
+      "workouts": 49,
+      "topWorkoutTypes": [
+        {
+          "type": "HKWorkoutActivityTypeTraditionalStrengthTraining",
+          "label": "传统力量训练",
+          "count": 13,
+          "totalDurationMinutes": 686,
+          "averageDurationMinutes": 52.77
+        },
+        {
+          "type": "HKWorkoutActivityTypeWalking",
+          "label": "步行",
+          "count": 13,
+          "totalDurationMinutes": 584,
+          "averageDurationMinutes": 44.92
+        },
+        {
+          "type": "HKWorkoutActivityTypeRunning",
+          "label": "跑步",
+          "count": 13,
+          "totalDurationMinutes": 520,
+          "averageDurationMinutes": 40
+        },
+        {
+          "type": "HKWorkoutActivityTypeCycling",
+          "label": "骑行",
+          "count": 5,
+          "totalDurationMinutes": 310,
+          "averageDurationMinutes": 62
+        },
+        {
+          "type": "HKWorkoutActivityTypeYoga",
+          "label": "瑜伽",
+          "count": 5,
+          "totalDurationMinutes": 208,
+          "averageDurationMinutes": 41.6
+        }
+      ]
+    },
+    "delta": {
+      "activeEnergyBurnedKcal": 32.91,
+      "exerciseMinutes": -4.17,
+      "standHours": 0.09,
+      "workouts": -3.33
+    },
+    "healthInsights": {
+      "activityTrend": "stable",
+      "activityTrendDelta": -4.17,
+      "whoGuidelineAssessment": "Apple 锻炼时间折算约 140 分钟/周。该字段不能完整确认活动强度或未记录的运动，因此不能据此计算 WHO 达标差距，也不据此生成运动处方。",
+      "workoutVariety": "近期记录包含多种运动（步行；传统力量训练；跑步）；多样性描述运动构成，不单独代表训练是否均衡或损伤风险更低。",
+      "normalRangeAssessment": "Apple 锻炼时间日均 20 分钟（折算约 140 分钟/周）；适合观察个人趋势，不等同于按强度分类的活动分钟；日均约 10.57 个小时达到 Apple“站立小时”的记录条件；这不是实际站立总时长；日均活动消耗 357.1 kcal。",
+      "interpretation": "Apple 锻炼时间可用于观察个人活动趋势，但不能单独判定公共健康指南是否达标。运动量保持稳定，一致性是长期获益的关键。",
+      "actionableAdvice": [
+        "现有记录中的运动节奏较稳定；是否维持或调整组合应结合个人目标、疲劳和疼痛。",
+        "继续用现有设备或应用记录运动，有助于观察个人趋势；解读时同时记录运动类型、强度、疲劳和疼痛。"
+      ],
+      "doctorTalkingPoints": []
+    },
+    "notes": [
+      "日常活动趋势来自活动摘要，训练类型单独统计。"
+    ]
+  },
+  "bodyComposition": {
+    "status": "ok",
+    "sources": {
+      "bodyMass": "Sample Watch",
+      "bodyFatPercentage": "Sample Watch"
+    },
+    "metrics": {
+      "bodyMass": {
+        "unit": "kg",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 72.38
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 72.15
+        },
+        "delta": 0.23,
+        "latest": {
+          "timestamp": "2026-06-24T07:15:00.000Z",
+          "value": 72.4
+        }
+      },
+      "bodyFatPercentage": {
+        "unit": "%",
+        "source": "Sample Watch",
+        "coverageDays": 60,
+        "sampleCount": 60,
+        "recent30d": {
+          "sampleCount": 4,
+          "average": 17.68
+        },
+        "baseline90d": {
+          "sampleCount": 13,
+          "average": 17.76
+        },
+        "delta": -0.09,
+        "latest": {
+          "timestamp": "2026-06-24T07:16:00.000Z",
+          "value": 17.7
+        }
+      }
+    },
+    "notes": [
+      "身体成分趋势基于近期最稳定的体重秤数据源汇报。"
+    ]
+  },
+  "attachments": {
+    "ecgFiles": 0,
+    "workoutRouteFiles": 0,
+    "imageAttachments": 0,
+    "otherFiles": 0,
+    "exampleFiles": []
+  }
+}

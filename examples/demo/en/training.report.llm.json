@@ -1,0 +1,117 @@
+{
+  "schema_version": "2.0.0",
+  "training_assessment": "Estimated training load is easing: CTL is 113, down 12.4% over 30 days, and TSB is +9.9, meaning recent load is below the 42-day baseline. Thirteen workouts and 605 minutes were recorded, led by strength training, walking, and running. Sleep is 0.4 hours below baseline while HRV is higher and resting heart rate is 1.4 bpm higher, so the recovery context remains mixed or limited rather than permission to add load.",
+  "overall_findings": [
+    "The recent 30-day window contains 13 workouts across three active exercise types, versus a 30-day-equivalent 16.3 workouts across five types in the baseline window.",
+    "CTL is below both its 30-day and 90-day comparison points, which describes easing recorded load rather than fitness loss by itself.",
+    "For the three active activities, next-day sleep, HRV, and resting heart rate are close to other observed days in the same 180-day window; this association still requires fatigue, pain, and performance context."
+  ],
+  "sport_sections": [
+    {
+      "sport_id": "traditional-strength-training",
+      "title": "Traditional Strength Training",
+      "assessment": "Four recent sessions totaled 206 minutes, with a 51.5-minute average. Duration and frequency are close to the longer pattern.",
+      "key_signals": [
+        "The 180-day comparison includes 25 next-day sleep observations versus 154 other days, plus 12 next-day HRV and resting-heart-rate observations versus 78 other days.",
+        "Next-day sleep, HRV, and resting heart rate were effectively unchanged from other observed days in the same window."
+      ],
+      "recommendations": [
+        "Maintain the current pattern; if progressing, change either weekly frequency or session duration first and review fatigue and technique quality."
+      ]
+    },
+    {
+      "sport_id": "walking",
+      "title": "Walking",
+      "assessment": "Five recent walks totaled 235 minutes and 21.5 km. This is the most frequent recent activity and remains close to the established weekly pattern.",
+      "key_signals": [
+        "Distance and heart-rate fields are complete for the recorded walks.",
+        "The comparison uses 25 next-day sleep observations versus 154 other days, and 12 next-day HRV and resting-heart-rate observations versus 78 other days; all three deltas are near zero."
+      ],
+      "recommendations": [
+        "Keep walking as a flexible low-load option; increase either duration or frequency first if a change is useful."
+      ]
+    },
+    {
+      "sport_id": "running",
+      "title": "Running",
+      "assessment": "Four recent runs totaled 164 minutes and 25.3 km, averaging 41 minutes and 6.3 km per recorded run.",
+      "key_signals": [
+        "Heart rate, distance, active energy, and MET fields are complete in this synthetic sample.",
+        "The comparison uses 26 next-day sleep observations versus 153 other days, and 13 next-day HRV and resting-heart-rate observations versus 77 other days; all three deltas are near zero."
+      ],
+      "recommendations": [
+        "Hold the current pattern while load is easing; if increasing it, alter either frequency or duration first and watch fatigue, pain, and pace stability."
+      ]
+    },
+    {
+      "sport_id": "cycling",
+      "title": "Cycling",
+      "assessment": "No cycling was recorded in the recent 30-day window; the 90-day baseline contains five rides totaling 310 minutes.",
+      "key_signals": [
+        "Ten next-day sleep observations were close to 169 other observed days; no next-day HRV or resting-heart-rate pairs are available."
+      ],
+      "recommendations": []
+    },
+    {
+      "sport_id": "yoga",
+      "title": "Yoga",
+      "assessment": "No yoga was recorded in the recent 30-day window; the 90-day baseline contains five sessions totaling 208 minutes.",
+      "key_signals": [
+        "Nine next-day sleep observations were close to 170 other observed days; no next-day HRV or resting-heart-rate pairs are available."
+      ],
+      "recommendations": []
+    }
+  ],
+  "watchouts": [
+    "Average sleep is 0.4 hours below baseline while resting heart rate is higher; use subjective recovery before increasing recorded load.",
+    "Cycling and yoga are historical rather than recent activities, and their recovery evidence is incomplete."
+  ],
+  "actions_next_2_weeks": [
+    "Maintain the current three-sport mix while noting fatigue, pain, and session quality alongside the device record.",
+    "If increasing training, change frequency or duration first, not both in the same step."
+  ],
+  "questions_for_doctor": [],
+  "data_limitations": [
+    "Training load is estimated from recorded duration and available MET values; it is not a laboratory measure.",
+    "Consumer-device recovery metrics are incomplete and cannot establish readiness on their own.",
+    "Unrecorded exercise, illness, travel, and subjective exertion are not represented in the export."
+  ],
+  "chart_callouts": [
+    {
+      "chart_id": "training_load",
+      "title": "Estimated training load",
+      "summary": "Both short- and long-term estimated load are easing, with recent load below the 42-day baseline."
+    },
+    {
+      "chart_id": "training_recovery",
+      "title": "Training duration and recovery",
+      "summary": "Recorded training duration fell while sleep, HRV, and resting heart rate moved in mixed directions."
+    },
+    {
+      "chart_id": "sport_traditional-strength-training_trend",
+      "title": "Strength-training trend",
+      "summary": "Monthly strength-training frequency and duration are broadly stable across recorded months."
+    },
+    {
+      "chart_id": "sport_walking_trend",
+      "title": "Walking trend",
+      "summary": "Walking remains frequent, with recent duration close to the established range."
+    },
+    {
+      "chart_id": "sport_running_trend",
+      "title": "Running trend",
+      "summary": "Running frequency and average duration are broadly stable across recorded months."
+    },
+    {
+      "chart_id": "sport_cycling_trend",
+      "title": "Cycling trend",
+      "summary": "Cycling appears in the historical record but not in the recent 30-day window."
+    },
+    {
+      "chart_id": "sport_yoga_trend",
+      "title": "Yoga trend",
+      "summary": "Yoga appears in the historical record but not in the recent 30-day window."
+    }
+  ],
+  "disclaimer": "This training report describes patterns in recorded data. It is not medical clearance, a diagnosis, or a personalized training prescription."
+}

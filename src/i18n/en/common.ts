@@ -16,4 +16,10 @@ export const commonEn: CommonT = {
   activity: "Activity",
   bodyComposition: "Body Composition",
   menstrualCycle: "Menstrual Cycle",
+  timestampDataQualityWarning: (count) =>
+    `${count} sample(s) with invalid or clearly implausible timestamps were isolated. The audit count remains in coverage and the samples were not analyzed.`,
+  unsupportedUnitWarning: (count) =>
+    `${count} value(s) with units that could not be normalized safely were ignored. The audit count remains in coverage to prevent mislabeled results.`,
+  duplicateWorkoutWarning: (count) =>
+    `${count} near-identical cross-source workout record(s) were merged before analysis. Coverage retains the raw workout count.`,
 };

@@ -18,6 +18,14 @@ export function analyzeOverview(
       latestSeen: toIso(parsed.coverageEnd),
       windowStart: toIso(window.effectiveStart),
       windowEnd: window.effectiveEnd.toISOString(),
+      excludedInvalidTimestampSamples:
+        parsed.dataQuality?.excludedInvalidTimestampSamples ?? 0,
+      excludedImplausibleActivitySummaries:
+        parsed.dataQuality?.excludedImplausibleActivitySummaries ?? 0,
+      excludedUnsupportedUnitValues:
+        parsed.dataQuality?.excludedUnsupportedUnitValues ?? 0,
+      deduplicatedWorkoutRecords:
+        parsed.dataQuality?.deduplicatedWorkoutRecords ?? 0,
     },
     sources: {
       discovered: parsed.sources,
